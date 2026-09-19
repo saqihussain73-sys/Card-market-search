@@ -6,7 +6,7 @@
 //   product  = a sealed item or a card within a group
 
 const BASE = "https://tcgcsv.com/tcgplayer";
-const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
+const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",unionarena:"Union Arena"};
 const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
 let nextRequest=0;
