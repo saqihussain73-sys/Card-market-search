@@ -116,9 +116,17 @@ function topChases(products) {
   candidates.sort((a,b)=>b.marketPrice-a.marketPrice);
   return candidates.slice(0,3);
 }
-function isSealed(name) {
-  return BOX_PATTERN.test(name) && !EXCLUDE_PATTERN.test(name);
+function productType(name) {
+ const n=String(name||"");
+ if(/\b(?:case|carton|sleeve|playmat|single pack|loose pack)\b/i.test(n))return null;
+ if(/\b(?:elite trainer box|\bETB\b)\b/i.test(n))return "etb";
+ if(/\b(?:tin|tins)\b/i.test(n))return "tin";
+ if(/\b(?:starter deck|structure deck|theme deck|trial deck)\b/i.test(n))return "deck";
+ if(/\b(?:bundle|collection box|premium collection|special collection)\b/i.test(n))return "bundle";
+ if(BOX_PATTERN.test(n) && !EXCLUDE_PATTERN.test(n))return "booster";
+ return null;
 }
+function isSealed(name) { return productType(name)==="booster"; }
 
 /**
  * Walks every set in a category and returns individual booster boxes with mirrored
@@ -143,8 +151,10 @@ async function compareBoxes(categoryNameFragment) {
     const chases=topChases(products);
     if(chases.length<1)continue;
     for (const p of products) {
-      if (!isSealed(p.name) || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice) || p.price.lowPrice<=0) continue;
+      const type=productType(p.name);
+      if (!type || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice) || p.price.lowPrice<=0) continue;
       results.push({
+        type,
         set: group.name,
         groupId: group.groupId,
         releaseDate: group.publishedOn,
