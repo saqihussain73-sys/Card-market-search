@@ -8,6 +8,28 @@ try { collected=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")); }
 catch { collected=new Set(); }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function money(n){return Number.isFinite(n)?"$"+n.toFixed(2):"Not available";}
+const RELEASES = {
+  origins:"31 October 2025",
+  spiritforged:"13 February 2026",
+  unleashed:"8 May 2026",
+  vendetta:"31 July 2026",
+  radiance:"23 October 2026 (upcoming)",
+  legacy:"29 January 2027 (upcoming)"
+};
+function releaseDate(set) {
+ const name=String(set).toLowerCase();
+ const key=Object.keys(RELEASES).find(k=>name.includes(k));
+ return key?RELEASES[key]:"Release date not verified";
+}
+function buyLinks(set) {
+ const query="Riftbound "+set+" sealed booster display box";
+ const encoded=encodeURIComponent(query);
+ return '<details class="buy"><summary>Where to buy</summary><div class="buy-links">'+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK</a>'+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/search/all/product?q='+encoded+'">TCGplayer</a>'+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Riftbound/Products">Cardmarket</a>'+
+ '</div><small>Search links only; check language, sealed condition, stock, shipping and total price before buying.</small></details>';
+}
 function updateCount(){countEl.textContent=collected.size+" collected";}
 async function loadCompareBoxes(){
  loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching Riftbound prices…";resultsEl.replaceChildren();
@@ -20,6 +42,7 @@ async function loadCompareBoxes(){
    const id=String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
+    '<p class="release">Release: '+escapeHtml(releaseDate(box.set))+'</p>'+buyLinks(box.set)+
     '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
