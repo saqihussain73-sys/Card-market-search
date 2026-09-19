@@ -28,29 +28,11 @@ function releaseDate(set) {
 function buyLinks(box,game="riftbound") {
  const query=GAMES[game]+" "+box.product+(box.product.toLowerCase().includes(box.set.toLowerCase())?"":" "+box.set);
  const encoded=encodeURIComponent(query);
- const google=encodeURIComponent(query+" UK buy sealed");
- const id=Number(box.productId);
- const direct=Number.isSafeInteger(id)&&id>0
-  ?'<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/product/'+id+'">TCGplayer · exact product</a>':'';
- const link=(label,url)=>'<a target="_blank" rel="noopener noreferrer" href="'+url+'">'+label+'</a>';
- const marketplaces=link("Amazon UK · search","https://www.amazon.co.uk/s?k="+encoded)+
-  link("eBay UK · search","https://www.ebay.co.uk/sch/i.html?_nkw="+encoded)+
-  link("Google Shopping UK · search","https://www.google.com/search?tbm=shop&gl=uk&q="+google);
- const specialist=link("Magic Madhouse · search","https://www.google.com/search?q="+encodeURIComponent("site:magicmadhouse.co.uk "+query))+
-  link("Total Cards · search","https://www.google.com/search?q="+encodeURIComponent("site:totalcards.net "+query));
- const local=link("CardboardCrack · Stretford","https://www.google.com/search?q="+encodeURIComponent("site:cardboardcrack.co.uk "+query))+
-  link("Pulse Collective · Middleton","https://www.google.com/search?q="+encodeURIComponent("site:pulsecollective.co.uk "+query))+
-  link("Fan Boy Three · Manchester","https://www.google.com/search?q="+encodeURIComponent("Fan Boy Three Manchester "+query))+
-  "";
- const highStreet=game==="pokemon"?'<div class="chase-meta">High-street shops · check local availability</div><div class="buy-links">'+
-  link("Argos · search","https://www.argos.co.uk/search/"+encoded+"/")+
-  link("Smyths Toys · search","https://www.google.com/search?q="+encodeURIComponent("site:smythstoys.com/uk/en-gb "+query))+'</div>':"";
  return '<details class="buy"><summary>🛒 Where to buy this product</summary>'+
-  '<div class="chase-meta">Exact product reference</div><div class="buy-links">'+direct+'</div>'+
-  '<div class="chase-meta">UK marketplaces</div><div class="buy-links">'+marketplaces+'</div>'+
-  '<div class="chase-meta">UK card retailers</div><div class="buy-links">'+specialist+'</div>'+
-  '<div class="chase-meta">Manchester & nearby · search or contact shop</div><div class="buy-links">'+local+'</div>'+highStreet+
-  '<small>Links are searches unless marked exact product. No UK stock or checkout price is verified. Match game, set, language, edition and sealed condition; compare delivery and import costs. USD scanner prices are US market references, not UK offers.</small></details>';
+  '<div class="buy-links">'+
+  '<a target="_blank" rel="noopener noreferrer" href="https://www.amazon.co.uk/s?k='+encoded+'">Amazon UK · search</a>'+
+  '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK · search</a>'+
+  '</div><small>These are product searches, not verified listings or prices. Check the game, set, language, edition and sealed condition before buying.</small></details>';
 }
 
 function gradedSection(card) {
