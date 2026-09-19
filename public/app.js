@@ -5,6 +5,8 @@ const countEl=document.getElementById("collection-count");
 const STORAGE_KEY="card-market-search:riftbound:collected:v1";
 const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
 let currentGame="riftbound";
+let loadSequence=0;
+const viewCache=new Map();
 let collected;
 try { collected=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")); }
 catch { collected=new Set(); }
@@ -47,17 +49,26 @@ const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
 selector.addEventListener("change",()=>{currentGame=selector.value;loadCompareBoxes();});
 async function loadCompareBoxes(){
- loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching "+GAMES[currentGame]+" prices…";resultsEl.replaceChildren();
+ const game=currentGame;
+ const sequence=++loadSequence;
+ loadBtn.disabled=true;statusEl.className="";
+ statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
+ resultsEl.replaceChildren();
  try{
-  const response=await fetch("/api/game/"+encodeURIComponent(currentGame));
-  const data=await response.json();
-  if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
-  statusEl.textContent=data.boxes.length+" priced booster boxes for "+GAMES[currentGame]+". Prices are from a daily mirror.";
+  let data=viewCache.get(game);
+  if(!data){
+   const response=await fetch("/api/game/"+encodeURIComponent(game));
+   data=await response.json();
+   if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
+   viewCache.set(game,data);
+  }
+  if(sequence!==loadSequence)return;
+  statusEl.textContent=data.boxes.length+" priced booster boxes for "+GAMES[game]+". Prices are from a daily mirror.";
   for(const box of data.boxes){
-   const id=currentGame+":"+String(box.productId);
+   const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">Release: '+escapeHtml(currentGame==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box.set,currentGame)+chaseSection(box.chases)+
+    '<p class="release">Release: '+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box.set,game)+chaseSection(box.chases)+
     '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
@@ -68,8 +79,8 @@ async function loadCompareBoxes(){
    });
    resultsEl.appendChild(card);
   }
- }catch(error){statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
- finally{loadBtn.disabled=false;updateCount();}
+ }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
+ finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
 }
 loadBtn.addEventListener("click",loadCompareBoxes);
 updateCount();loadCompareBoxes();
