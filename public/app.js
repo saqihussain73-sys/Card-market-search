@@ -1,33 +1,3 @@
-const ceForm=document.getElementById("ce-test-form");
-ceForm.addEventListener("submit",async event=>{
- event.preventDefault();
- const button=document.getElementById("ce-test-btn"),result=document.getElementById("ce-test-result");
- const params=new URLSearchParams({game:document.getElementById("ce-game").value,set:document.getElementById("ce-set").value.trim(),product:document.getElementById("ce-product").value.trim(),type:document.getElementById("ce-type").value,debug:"1"});
- button.disabled=true;result.textContent="Checking Card Empire directly…";result.className="";
- try{
-  const response=await fetch("/api/retail/card-empire?"+params);
-  if(!response.ok)throw Error("Retailer lookup unavailable (HTTP "+response.status+")");
-  const data=await response.json();result.replaceChildren();
-  if(data.offer && Number.isFinite(data.offer.priceGBP) && /^https:\/\/www\.cardempire\.com\/products\//.test(data.offer.url)){
-   const label=document.createElement("div");label.textContent=data.offer.name+" · £"+data.offer.priceGBP.toFixed(2)+" (online listed price)";
-   const link=document.createElement("a");link.href=data.offer.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open exact Card Empire product page";
-   result.append(label,link);
-  }else result.textContent="No verified exact match and GBP price found. This does not confirm the product is unavailable.";
-  const d=data.diagnostics;
-  if(d){
-   const summary=document.createElement("p");
-   summary.textContent="Diagnostic: "+d.status+" · "+d.returned+" unique products returned.";
-   result.appendChild(summary);
-   for(const search of d.searches||[]){
-    const line=document.createElement("div");line.textContent="Search '"+search.query+"': "+search.status+(search.count!==undefined?" ("+search.count+" results)":"")+(search.httpStatus?" HTTP "+search.httpStatus:"");result.appendChild(line);
-   }
-   for(const candidate of (d.candidates||[]).slice(0,10)){
-    const line=document.createElement("div");line.textContent=candidate.title+" — "+candidate.reasons.join("; ");result.appendChild(line);
-   }
-  }
- }catch(error){result.textContent="Lookup error: "+error.message;result.className="error";}
- finally{button.disabled=false;}
-});
 const statusEl=document.getElementById("status");
 const resultsEl=document.getElementById("results");
 const loadBtn=document.getElementById("load-btn");
@@ -83,26 +53,6 @@ function buyLinks(box,game="riftbound") {
   '<small>Links are searches unless marked exact product. No UK stock or checkout price is verified. Match game, set, language, edition and sealed condition; compare delivery and import costs. USD scanner prices are US market references, not UK offers.</small></details>';
 }
 
-async function showCardEmpire(card,box,game){
- if(!["pokemon","yugioh"].includes(game))return;
- try{
-  const params=new URLSearchParams({game,product:box.product,set:box.set,type:box.type||"booster"});
-  const response=await fetch("/api/retail/card-empire?"+params);
-  if(!response.ok)return;
-  const data=await response.json(),offer=data.offer;
-  if(!offer||!Number.isFinite(offer.priceGBP)||offer.priceGBP<=0||!/^https:\/\/www\.cardempire\.com\/products\//.test(offer.url))return;
-  if(!card.isConnected)return;
-  const links=card.querySelector(".buy .buy-links:last-of-type");
-  const section=document.createElement("div");
-  section.className="card-empire-offer";
-  const label=document.createElement("div");label.className="chase-meta";label.textContent="Card Empire · online listed price";
-  const row=document.createElement("div");row.className="buy-links";
-  const link=document.createElement("a");link.href=offer.url;link.target="_blank";link.rel="noopener noreferrer";
-  link.textContent="Card Empire · £"+offer.priceGBP.toFixed(2)+" · exact product page";
-  row.appendChild(link);section.append(label,row);
-  const note=card.querySelector(".buy small");note.before(section);
- }catch{}
-}
 function gradedSection(card) {
  const grades=card.gradedPrices;
  if(!grades || typeof grades!=="object")return "";
@@ -170,7 +120,6 @@ async function loadCompareBoxes(){
     updateCount();
    });
    resultsEl.appendChild(card);
-   showCardEmpire(card,box,game);
   }
  }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
  finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
