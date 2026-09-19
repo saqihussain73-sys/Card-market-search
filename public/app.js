@@ -25,15 +25,18 @@ function releaseDate(set) {
  const key=Object.keys(RELEASES).find(k=>name.includes(k));
  return key?RELEASES[key]:"Release date not verified";
 }
-function buyLinks(set,game="riftbound") {
- const query=GAMES[game]+" "+set+" sealed booster display box";
+function buyLinks(box,game="riftbound") {
+ const query=GAMES[game]+" "+box.product+" "+box.set;
  const encoded=encodeURIComponent(query);
- return '<details class="buy"><summary>🛒 Where to buy</summary><div class="buy-links">'+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK</a>'+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/search/all/product?q='+encoded+'">TCGplayer</a>'+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en">Cardmarket</a>'+
- '</div><small>Search links only; check language, sealed condition, stock, shipping and total price before buying.</small></details>';
+ const id=Number(box.productId);
+ const direct=Number.isSafeInteger(id)&&id>0
+  ?'<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/product/'+id+'">TCGplayer · product page</a>':'';
+ return '<details class="buy"><summary>🛒 Buy this product</summary><div class="buy-links">'+direct+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK · matching listings</a>'+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Products/Search?searchString='+encoded+'">Cardmarket · product search</a>'+
+ '</div><small>TCGplayer links use the product ID; UK links search the full product name. Check the exact edition, language, sealed condition, stock, shipping and final price before buying. Displayed USD market prices are not retailer offers.</small></details>';
 }
+
 function gradedSection(card) {
  const grades=card.gradedPrices;
  if(!grades || typeof grades!=="object")return "";
@@ -91,7 +94,7 @@ async function loadCompareBoxes(){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">Release: '+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box.set,game)+chaseSection(box.chases)+
+    '<p class="release">Release: '+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box,game)+chaseSection(box.chases)+
     '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
