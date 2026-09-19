@@ -7,13 +7,9 @@
 
 const BASE = "https://tcgcsv.com/tcgplayer";
 
-const SEALED_KEYWORDS = [
-  "booster box",
-  "booster display",
-  "booster pack",
-  "bundle",
-  "elite trainer",
-];
+// Match individual sealed booster boxes/displays only; exclude bulk cases and packs.
+const BOX_PATTERN = /\b(?:booster box|booster display|display box)\b/i;
+const EXCLUDE_PATTERN = /\b(?:case|carton|pack|bundle|collection|elite trainer|starter|deck|sleeve|mini box|gift|promo|promotional)\b/i;
 
 let categoryCache = null;
 let categoryCacheAt = 0;
@@ -80,12 +76,11 @@ async function getProductsWithPrices(categoryId, groupId) {
 }
 
 function isSealed(name) {
-  const low = name.toLowerCase();
-  return SEALED_KEYWORDS.some((k) => low.includes(k));
+  return BOX_PATTERN.test(name) && !EXCLUDE_PATTERN.test(name);
 }
 
 /**
- * Walks every set in a category and returns sealed products with live
+ * Walks every set in a category and returns individual booster boxes with mirrored
  * market prices, most expensive first. This is what powers "Compare Boxes".
  */
 async function compareBoxes(categoryNameFragment) {
