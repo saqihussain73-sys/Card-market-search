@@ -2,7 +2,7 @@ const ceForm=document.getElementById("ce-test-form");
 ceForm.addEventListener("submit",async event=>{
  event.preventDefault();
  const button=document.getElementById("ce-test-btn"),result=document.getElementById("ce-test-result");
- const params=new URLSearchParams({game:document.getElementById("ce-game").value,set:document.getElementById("ce-set").value.trim(),product:document.getElementById("ce-product").value.trim(),type:document.getElementById("ce-type").value});
+ const params=new URLSearchParams({game:document.getElementById("ce-game").value,set:document.getElementById("ce-set").value.trim(),product:document.getElementById("ce-product").value.trim(),type:document.getElementById("ce-type").value,debug:"1"});
  button.disabled=true;result.textContent="Checking Card Empire directly…";result.className="";
  try{
   const response=await fetch("/api/retail/card-empire?"+params);
@@ -13,6 +13,18 @@ ceForm.addEventListener("submit",async event=>{
    const link=document.createElement("a");link.href=data.offer.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open exact Card Empire product page";
    result.append(label,link);
   }else result.textContent="No verified exact match and GBP price found. This does not confirm the product is unavailable.";
+  const d=data.diagnostics;
+  if(d){
+   const summary=document.createElement("p");
+   summary.textContent="Diagnostic: "+d.status+" · "+d.returned+" unique products returned.";
+   result.appendChild(summary);
+   for(const search of d.searches||[]){
+    const line=document.createElement("div");line.textContent="Search '"+search.query+"': "+search.status+(search.count!==undefined?" ("+search.count+" results)":"")+(search.httpStatus?" HTTP "+search.httpStatus:"");result.appendChild(line);
+   }
+   for(const candidate of (d.candidates||[]).slice(0,10)){
+    const line=document.createElement("div");line.textContent=candidate.title+" — "+candidate.reasons.join("; ");result.appendChild(line);
+   }
+  }
  }catch(error){result.textContent="Lookup error: "+error.message;result.className="error";}
  finally{button.disabled=false;}
 });
