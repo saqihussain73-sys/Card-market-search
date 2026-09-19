@@ -24,7 +24,7 @@ function releaseDate(set) {
 function buyLinks(set) {
  const query="Riftbound "+set+" sealed booster display box";
  const encoded=encodeURIComponent(query);
- return '<details class="buy"><summary>Where to buy</summary><div class="buy-links">'+
+ return '<details class="buy"><summary>🛒 Where to buy</summary><div class="buy-links">'+
  '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK</a>'+
  '<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/search/all/product?q='+encoded+'">TCGplayer</a>'+
  '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Riftbound/Products">Cardmarket</a>'+
@@ -32,13 +32,13 @@ function buyLinks(set) {
 }
 function chaseSection(chases) {
  const rows=Array.isArray(chases)?chases:[];
- return '<details class="chases"><summary>Top 3 chase cards</summary>'+
- (rows.length?'<ol>'+rows.map(card=>'<li><strong>'+escapeHtml(card.name)+'</strong>'+
- (card.cardNumber?' · #'+escapeHtml(card.cardNumber):'')+
- ' · '+escapeHtml(card.variant)+' — '+money(card.marketPrice)+
- ' <small>USD market price</small></li>').join('')+'</ol>':
- '<p>No priced individual cards available for this set yet.</p>')+
- '<small>Ranked by available TCGplayer mirrored market prices; variants may represent the same card.</small></details>';
+ return '<details class="chases"><summary>🏆 Top 3 chase cards</summary>'+
+ (rows.length?'<div class="chase-list">'+rows.map((card,i)=>
+ '<div class="chase-row"><span class="rank">'+(i+1)+'</span><div><div class="chase-name">'+escapeHtml(card.name)+'</div>'+
+ '<div class="chase-meta">'+(card.cardNumber?'#'+escapeHtml(card.cardNumber)+' · ':'')+escapeHtml(card.variant)+'</div></div>'+
+ '<div class="chase-price">'+money(card.marketPrice)+'</div></div>').join('')+'</div>':
+ '<p class="chase-note">No priced individual cards available for this set yet.</p>')+
+ '<small>USD market prices from TCGplayer daily mirror. Variants may represent the same card.</small></details>';
 }
 function updateCount(){countEl.textContent=collected.size+" collected";}
 async function loadCompareBoxes(){
