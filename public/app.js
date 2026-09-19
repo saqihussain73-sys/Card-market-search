@@ -30,6 +30,16 @@ function buyLinks(set) {
  '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Riftbound/Products">Cardmarket</a>'+
  '</div><small>Search links only; check language, sealed condition, stock, shipping and total price before buying.</small></details>';
 }
+function chaseSection(chases) {
+ const rows=Array.isArray(chases)?chases:[];
+ return '<details class="chases"><summary>Top 3 chase cards</summary>'+
+ (rows.length?'<ol>'+rows.map(card=>'<li><strong>'+escapeHtml(card.name)+'</strong>'+
+ (card.cardNumber?' · #'+escapeHtml(card.cardNumber):'')+
+ ' · '+escapeHtml(card.variant)+' — '+money(card.marketPrice)+
+ ' <small>USD market price</small></li>').join('')+'</ol>':
+ '<p>No priced individual cards available for this set yet.</p>')+
+ '<small>Ranked by available TCGplayer mirrored market prices; variants may represent the same card.</small></details>';
+}
 function updateCount(){countEl.textContent=collected.size+" collected";}
 async function loadCompareBoxes(){
  loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching Riftbound prices…";resultsEl.replaceChildren();
@@ -42,7 +52,7 @@ async function loadCompareBoxes(){
    const id=String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">Release: '+escapeHtml(releaseDate(box.set))+'</p>'+buyLinks(box.set)+
+    '<p class="release">Release: '+escapeHtml(releaseDate(box.set))+'</p>'+buyLinks(box.set)+chaseSection(box.chases)+
     '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
