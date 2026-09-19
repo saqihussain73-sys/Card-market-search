@@ -26,15 +26,31 @@ function releaseDate(set) {
  return key?RELEASES[key]:"Release date not verified";
 }
 function buyLinks(box,game="riftbound") {
- const query=GAMES[game]+" "+box.product+" "+box.set;
+ const query=GAMES[game]+" "+box.product+(box.product.toLowerCase().includes(box.set.toLowerCase())?"":" "+box.set);
  const encoded=encodeURIComponent(query);
+ const google=encodeURIComponent(query+" UK buy sealed");
  const id=Number(box.productId);
  const direct=Number.isSafeInteger(id)&&id>0
-  ?'<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/product/'+id+'">TCGplayer · product page</a>':'';
- return '<details class="buy"><summary>🛒 Buy this product</summary><div class="buy-links">'+direct+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK · matching listings</a>'+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Products/Search?searchString='+encoded+'">Cardmarket · product search</a>'+
- '</div><small>TCGplayer links use the product ID; UK links search the full product name. Check the exact edition, language, sealed condition, stock, shipping and final price before buying. Displayed USD market prices are not retailer offers.</small></details>';
+  ?'<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/product/'+id+'">TCGplayer · exact product</a>':'';
+ const link=(label,url)=>'<a target="_blank" rel="noopener noreferrer" href="'+url+'">'+label+'</a>';
+ const marketplaces=link("Amazon UK · search","https://www.amazon.co.uk/s?k="+encoded)+
+  link("eBay UK · search","https://www.ebay.co.uk/sch/i.html?_nkw="+encoded)+
+  link("Google Shopping UK · search","https://www.google.com/search?tbm=shop&gl=uk&q="+google);
+ const specialist=link("Magic Madhouse · search","https://www.google.com/search?q="+encodeURIComponent("site:magicmadhouse.co.uk "+query))+
+  link("Total Cards · search","https://www.google.com/search?q="+encodeURIComponent("site:totalcards.net "+query));
+ const local=link("CardboardCrack · Stretford","https://www.google.com/search?q="+encodeURIComponent("site:cardboardcrack.co.uk "+query))+
+  link("Pulse Collective · Middleton","https://www.google.com/search?q="+encodeURIComponent("site:pulsecollective.co.uk "+query))+
+  link("Fan Boy Three · Manchester","https://www.google.com/search?q="+encodeURIComponent("Fan Boy Three Manchester "+query))+
+  link("Card Empire · Afflecks","https://www.google.com/search?q="+encodeURIComponent("Card Empire Afflecks "+query));
+ const highStreet=game==="pokemon"?'<div class="chase-meta">High-street shops · check local availability</div><div class="buy-links">'+
+  link("Argos · search","https://www.argos.co.uk/search/"+encoded+"/")+
+  link("Smyths Toys · search","https://www.google.com/search?q="+encodeURIComponent("site:smythstoys.com/uk/en-gb "+query))+'</div>':"";
+ return '<details class="buy"><summary>🛒 Where to buy this product</summary>'+
+  '<div class="chase-meta">Exact product reference</div><div class="buy-links">'+direct+'</div>'+
+  '<div class="chase-meta">UK marketplaces</div><div class="buy-links">'+marketplaces+'</div>'+
+  '<div class="chase-meta">UK card retailers</div><div class="buy-links">'+specialist+'</div>'+
+  '<div class="chase-meta">Manchester & nearby · search or contact shop</div><div class="buy-links">'+local+'</div>'+highStreet+
+  '<small>Links are searches unless marked exact product. No UK stock or checkout price is verified. Match game, set, language, edition and sealed condition; compare delivery and import costs. USD scanner prices are US market references, not UK offers.</small></details>';
 }
 
 function gradedSection(card) {
@@ -95,7 +111,7 @@ async function loadCompareBoxes(){
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
     '<p class="release">Release: '+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box,game)+chaseSection(box.chases)+
-    '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
+    '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
    card.querySelector("input").addEventListener("change",event=>{
