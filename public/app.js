@@ -3,6 +3,8 @@ const resultsEl=document.getElementById("results");
 const loadBtn=document.getElementById("load-btn");
 const countEl=document.getElementById("collection-count");
 const STORAGE_KEY="card-market-search:riftbound:collected:v1";
+const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
+let currentGame="riftbound";
 let collected;
 try { collected=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")); }
 catch { collected=new Set(); }
@@ -21,13 +23,13 @@ function releaseDate(set) {
  const key=Object.keys(RELEASES).find(k=>name.includes(k));
  return key?RELEASES[key]:"Release date not verified";
 }
-function buyLinks(set) {
- const query="Riftbound "+set+" sealed booster display box";
+function buyLinks(set,game="riftbound") {
+ const query=GAMES[game]+" "+set+" sealed booster display box";
  const encoded=encodeURIComponent(query);
  return '<details class="buy"><summary>🛒 Where to buy</summary><div class="buy-links">'+
  '<a target="_blank" rel="noopener noreferrer" href="https://www.ebay.co.uk/sch/i.html?_nkw='+encoded+'">eBay UK</a>'+
  '<a target="_blank" rel="noopener noreferrer" href="https://www.tcgplayer.com/search/all/product?q='+encoded+'">TCGplayer</a>'+
- '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en/Riftbound/Products">Cardmarket</a>'+
+ '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en">Cardmarket</a>'+
  '</div><small>Search links only; check language, sealed condition, stock, shipping and total price before buying.</small></details>';
 }
 function chaseSection(chases) {
@@ -41,18 +43,21 @@ function chaseSection(chases) {
  '<small>USD market prices from TCGplayer daily mirror. Variants may represent the same card.</small></details>';
 }
 function updateCount(){countEl.textContent=collected.size+" collected";}
+const selector=document.getElementById("game-select");
+for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
+selector.addEventListener("change",()=>{currentGame=selector.value;loadCompareBoxes();});
 async function loadCompareBoxes(){
- loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching Riftbound prices…";resultsEl.replaceChildren();
+ loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching "+GAMES[currentGame]+" prices…";resultsEl.replaceChildren();
  try{
-  const response=await fetch("/api/compare-boxes?game=riftbound");
+  const response=await fetch("/api/game/"+encodeURIComponent(currentGame));
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
-  statusEl.textContent=data.boxes.length+" individual booster boxes found. Prices are from a daily mirror.";
+  statusEl.textContent=data.boxes.length+" complete booster box listings for "+GAMES[currentGame]+". Prices are from a daily mirror.";
   for(const box of data.boxes){
-   const id=String(box.productId);
+   const id=currentGame+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">Release: '+escapeHtml(releaseDate(box.set))+'</p>'+buyLinks(box.set)+chaseSection(box.chases)+
+    '<p class="release">Release: '+escapeHtml(currentGame==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box.set,currentGame)+chaseSection(box.chases)+
     '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
