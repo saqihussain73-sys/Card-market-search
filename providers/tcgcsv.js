@@ -68,13 +68,41 @@ async function getProductsWithPrices(categoryId, groupId) {
     getJson(`${BASE}/${categoryId}/${groupId}/products`),
     getJson(`${BASE}/${categoryId}/${groupId}/prices`),
   ]);
-  const priceById = new Map(pricesRes.results.map((p) => [p.productId, p]));
+  const priceById = new Map();
+  for(const price of pricesRes.results){
+    if(!priceById.has(price.productId))priceById.set(price.productId,[]);
+    priceById.get(price.productId).push(price);
+  }
   return productsRes.results.map((p) => ({
     ...p,
-    price: priceById.get(p.productId) || null,
+    prices: priceById.get(p.productId) || [],
+    price: (priceById.get(p.productId)||[]).find(p=>Number.isFinite(p.marketPrice)) || null,
   }));
 }
 
+function isCard(product) {
+  const name=String(product.name||"");
+  return !isSealed(name) &&
+    !/\\b(?:booster|display|box|case|bundle|starter|deck|pack|sleeve|playmat|promo pack|collection)\\b/i.test(name);
+}
+function topChases(products) {
+  const candidates=[];
+  for(const product of products){
+    if(!isCard(product))continue;
+    const variants=product.prices||[];
+    for(const price of variants){
+      if(!Number.isFinite(price.marketPrice)||price.marketPrice<=0)continue;
+      candidates.push({
+        name:product.name,productId:product.productId,
+        cardNumber:product.extendedData?.find?.(d=>/number/i.test(d.name))?.value||null,
+        variant:price.subTypeName||"Standard",marketPrice:price.marketPrice,
+        lowPrice:price.lowPrice??null
+      });
+    }
+  }
+  candidates.sort((a,b)=>b.marketPrice-a.marketPrice);
+  return candidates.slice(0,3);
+}
 function isSealed(name) {
   return BOX_PATTERN.test(name) && !EXCLUDE_PATTERN.test(name);
 }
@@ -90,6 +118,7 @@ async function compareBoxes(categoryNameFragment) {
   const results = [];
   for (const group of groups) {
     const products = await getProductsWithPrices(category.categoryId, group.groupId);
+    const chases=topChases(products);
     for (const p of products) {
       if (!isSealed(p.name)) continue;
       results.push({
@@ -100,6 +129,7 @@ async function compareBoxes(categoryNameFragment) {
         marketPrice: p.price?.marketPrice ?? null,
         lowPrice: p.price?.lowPrice ?? null,
         fetchedAt: new Date().toISOString(),
+        chases,
       });
     }
   }
