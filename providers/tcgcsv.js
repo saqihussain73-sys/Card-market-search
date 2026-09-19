@@ -119,7 +119,7 @@ function topChases(products) {
 function productType(name) {
  const n=String(name||"");
  if(/\b(?:case|carton|sleeve|playmat|single pack|loose pack)\b/i.test(n))return null;
- if(/\b(?:elite trainer box|\bETB\b)\b/i.test(n))return "etb";
+ if(/\b(?:elite trainer box|ETB)\b/i.test(n))return "etb";
  if(/\b(?:tin|tins)\b/i.test(n))return "tin";
  if(/\b(?:starter deck|structure deck|theme deck|trial deck)\b/i.test(n))return "deck";
  if(/\b(?:bundle|collection box|premium collection|special collection)\b/i.test(n))return "bundle";
