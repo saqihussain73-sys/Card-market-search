@@ -34,7 +34,7 @@ function buyLinks(set,game="riftbound") {
 }
 function chaseSection(chases) {
  const rows=Array.isArray(chases)?chases:[];
- return '<details class="chases"><summary>🏆 Top 3 chase cards</summary>'+
+ return '<details class="chases"><summary>🏆 Chase cards (up to 3)</summary>'+
  (rows.length?'<div class="chase-list">'+rows.map((card,i)=>
  '<div class="chase-row"><span class="rank">'+(i+1)+'</span><div><div class="chase-name">'+escapeHtml(card.name)+'</div>'+
  '<div class="chase-meta">'+(card.cardNumber?'#'+escapeHtml(card.cardNumber)+' · ':'')+escapeHtml(card.variant)+'</div></div>'+
@@ -52,7 +52,7 @@ async function loadCompareBoxes(){
   const response=await fetch("/api/game/"+encodeURIComponent(currentGame));
   const data=await response.json();
   if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
-  statusEl.textContent=data.boxes.length+" complete booster box listings for "+GAMES[currentGame]+". Prices are from a daily mirror.";
+  statusEl.textContent=data.boxes.length+" priced booster boxes for "+GAMES[currentGame]+". Prices are from a daily mirror.";
   for(const box of data.boxes){
    const id=currentGame+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
