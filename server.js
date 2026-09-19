@@ -1,5 +1,6 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const tcgcsv = require("./providers/tcgcsv");
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -15,19 +16,32 @@ app.get("/api/compare-boxes", async (req, res) => {
   catch (err) { console.error(err); res.status(502).json({error:err.message}); }
 });
 app.get("/api/games", (req,res)=>res.json(tcgcsv.GAME_NAMES));
+const cacheDir=process.env.CACHE_DIR||path.join(__dirname,".scan-cache");
+const gameJobs=new Map();
+function cachePath(key){return path.join(cacheDir,key+".json");}
+function readSnapshot(key){
+ try{const value=JSON.parse(fs.readFileSync(cachePath(key),"utf8"));return value&&Array.isArray(value.boxes)?value:null;}catch{return null;}
+}
+async function scanGame(key){
+ if(gameJobs.has(key))return gameJobs.get(key);
+ const job=tcgcsv.getGameBoxes(key).then(data=>{
+  try{fs.mkdirSync(cacheDir,{recursive:true});fs.writeFileSync(cachePath(key),JSON.stringify({...data,savedAt:new Date().toISOString()}));}
+  catch(err){console.warn("Snapshot save unavailable:",err.message);}
+  return data;
+ }).finally(()=>gameJobs.delete(key));
+ gameJobs.set(key,job);return job;
+}
 app.get("/api/game/:key",async(req,res)=>{
- try{res.json(await tcgcsv.getGameBoxes(req.params.key));}
- catch(err){console.error(err);res.status(502).json({error:err.message});}
+ const key=req.params.key;
+ if(!Object.hasOwn(tcgcsv.GAME_NAMES,key))return res.status(404).json({error:"Unsupported game"});
+ const snapshot=readSnapshot(key);
+ if(snapshot){
+  if(Date.now()-Date.parse(snapshot.savedAt||0)>24*60*60*1000)scanGame(key).catch(err=>console.warn("Background refresh:",key,err.message));
+  return res.json({...snapshot,cacheStatus:"snapshot",refreshing:gameJobs.has(key)});
+ }
+ scanGame(key).catch(err=>console.warn("Game scan:",key,err.message));
+ return res.status(202).json({status:"scanning",game:key,message:"First scan in progress. Try again shortly."});
 });
 
 app.get("/health", (req,res) => res.json({ok:true}));
-app.listen(PORT, () => {
- console.log(`Card Market Search listening on ${PORT}`);
- // Warm smaller catalogues first. Larger scans run only after these finish.
- setTimeout(async()=>{
-  for(const game of ["riftbound","gundam","lorcana","starwars","unionarena","onepiece","pokemon","magic"]){
-   try{await tcgcsv.getGameBoxes(game);console.log("Cache ready:",game);}
-   catch(err){console.warn("Cache warmup skipped:",game,err.message);}
-  }
- },3000);
-});
+app.listen(PORT, () => console.log(`Card Market Search listening on ${PORT}`));
