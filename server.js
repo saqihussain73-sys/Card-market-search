@@ -19,6 +19,49 @@ app.get("/api/game/:key",async(req,res)=>{
  try{res.json(await tcgcsv.getGameBoxes(req.params.key));}
  catch(err){console.error(err);res.status(502).json({error:err.message});}
 });
+
+const cardEmpireCache=new Map();
+const CE_TTL=6*60*60*1000;
+function normaliseTitle(value){return String(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();}
+function matchCardEmpire(item,game,box){
+ const title=normaliseTitle(item.title), target=normaliseTitle(box.product), set=normaliseTitle(box.set);
+ const gameTokens={pokemon:["pokemon","pok mon"],yugioh:["yu gi oh","yugioh"]}[game];
+ if(!gameTokens || !gameTokens.some(token=>title.includes(token)))return false;
+ if(!set || !title.includes(set))return false;
+ const type=box.type||"booster";
+ const types={booster:/\b(?:booster box|booster display|display box)\b/,etb:/\b(?:elite trainer box|etb)\b/,tin:/\btins?\b/,bundle:/\b(?:bundle|collection)\b/,deck:/\b(?:starter|structure|theme|trial) deck\b/};
+ if(!types[type]?.test(title) || /\b(?:case|carton|single pack|loose pack)\b/.test(title))return false;
+ const critical=target.split(" ").filter(token=>token.length>2&&!["pokemon","booster","box","display","english","japanese","sealed","the","with"].includes(token));
+ if(!critical.every(token=>title.split(" ").includes(token)))return false;
+ for(const language of ["english","japanese"]){
+  if(target.includes(language)&&!title.includes(language))return false;
+  if(title.includes(language)&&target.includes(language==="english"?"japanese":"english"))return false;
+ }
+ return true;
+}
+app.get("/api/retail/card-empire",async(req,res)=>{
+ const game=String(req.query.game||""), product=String(req.query.product||""),set=String(req.query.set||""),type=String(req.query.type||"booster");
+ if(!["pokemon","yugioh"].includes(game)||!product||!set||product.length>180||set.length>120)return res.json({offer:null});
+ const key=JSON.stringify([game,product,set,type]), cached=cardEmpireCache.get(key);
+ if(cached&&Date.now()-cached.at<CE_TTL)return res.json(cached.data);
+ try{
+  const query=encodeURIComponent(set+" "+product);
+  const response=await fetch("https://www.cardempire.com/search/suggest.json?q="+query+"&resources[type]=product&resources[limit]=10",{headers:{"User-Agent":"CardMarketSearch/1.0"},signal:AbortSignal.timeout(8000)});
+  if(!response.ok)throw Error("Card Empire search unavailable");
+  const data=await response.json();
+  const products=data.resources?.results?.products||[];
+  const matches=products.filter(item=>matchCardEmpire(item,game,{product,set,type})).map(item=>{
+   const price=Number(item.price);
+   const url=new URL(item.url||"", "https://www.cardempire.com");
+   if(url.hostname!=="www.cardempire.com"||!url.pathname.startsWith("/products/")||!Number.isFinite(price)||price<=0)return null;
+   return {name:item.title,priceGBP:price,url:url.href};
+  }).filter(Boolean);
+  const result={offer:matches.length===1?matches[0]:null};
+  cardEmpireCache.set(key,{at:Date.now(),data:result});
+  res.json(result);
+ }catch(err){console.warn("Card Empire lookup failed:",err.message);res.json({offer:null});}
+});
+
 app.get("/health", (req,res) => res.json({ok:true}));
 app.listen(PORT, () => {
  console.log(`Card Market Search listening on ${PORT}`);
