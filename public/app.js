@@ -34,13 +34,20 @@ function buyLinks(set,game="riftbound") {
  '<a target="_blank" rel="noopener noreferrer" href="https://www.cardmarket.com/en">Cardmarket</a>'+
  '</div><small>Search links only; check language, sealed condition, stock, shipping and total price before buying.</small></details>';
 }
+function gradedSection(card) {
+ const grades=card.gradedPrices;
+ if(!grades || typeof grades!=="object")return "";
+ const entries=[["PSA 9",grades.psa9],["PSA 10",grades.psa10]].filter(([,v])=>v && Number.isFinite(v.price) && v.price>0 && v.currency==="USD" && v.source && v.updatedAt && !Number.isNaN(Date.parse(v.updatedAt)));
+ if(!entries.length)return "";
+ return '<div class="chase-meta">'+entries.map(([label,v])=>escapeHtml(label)+': <strong>'+money(v.price)+'</strong> · '+escapeHtml(v.source)+' · '+escapeHtml(new Date(v.updatedAt).toLocaleDateString("en-GB"))).join('<br>')+'</div>';
+}
 function chaseSection(chases) {
  const rows=Array.isArray(chases)?chases:[];
  return '<details class="chases"><summary>🏆 Chase cards (up to 3)</summary>'+
  (rows.length?'<div class="chase-list">'+rows.map((card,i)=>
  '<div class="chase-row"><span class="rank">'+(i+1)+'</span><div><div class="chase-name">'+escapeHtml(card.name)+'</div>'+
  '<div class="chase-meta">'+(card.cardNumber?'#'+escapeHtml(card.cardNumber)+' · ':'')+escapeHtml(card.variant)+'</div></div>'+
- '<div class="chase-price">'+money(card.marketPrice)+'</div></div>').join('')+'</div>':
+ '<div class="chase-price">Raw '+money(card.marketPrice)+gradedSection(card)+'</div></div>').join('')+'</div>':
  '<p class="chase-note">No priced individual cards available for this set yet.</p>')+
  '<small>USD market prices from TCGplayer daily mirror. Variants may represent the same card.</small></details>';
 }
