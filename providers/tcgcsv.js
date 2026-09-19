@@ -62,7 +62,10 @@ async function listCategories() {
 
 async function findCategoryByName(nameFragment) {
   const categories = await listCategories();
-  const match = categories.find((c) => c.name.toLowerCase()===nameFragment.toLowerCase());
+  const normalize = value => String(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+  const wanted=normalize(nameFragment);
+  const match=categories.find(c=>normalize(c.name)===wanted || normalize(c.displayName)===wanted)
+    || categories.find(c=>normalize(c.name).includes(wanted) || normalize(c.displayName).includes(wanted));
   if (!match) {
     throw new Error(`Pricing category unavailable for "${nameFragment}".`);
   }
