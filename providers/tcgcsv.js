@@ -6,6 +6,11 @@
 //   product  = a sealed item or a card within a group
 
 const BASE = "https://tcgcsv.com/tcgplayer";
+const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Disney Lorcana",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
+const CACHE_MS=24*60*60*1000;
+const resultCache=new Map();
+let nextRequest=0;
+let requestQueue=Promise.resolve();
 
 // Match individual sealed booster boxes/displays only; exclude bulk cases and packs.
 const BOX_PATTERN = /\b(?:booster box|booster display|display box)\b/i;
@@ -25,14 +30,16 @@ function sleep(ms) {
 }
 
 async function getJson(url) {
-  const res = await fetch(url, {
-    headers: { "User-Agent": USER_AGENT },
+  const job=requestQueue.then(async()=>{
+    const wait=Math.max(0,nextRequest-Date.now());
+    if(wait)await sleep(wait);
+    nextRequest=Date.now()+150;
+    const res=await fetch(url,{headers:{"User-Agent":USER_AGENT}});
+    if(!res.ok)throw new Error(`tcgcsv request failed: ${res.status} ${res.statusText}`);
+    return res.json();
   });
-  await sleep(100);
-  if (!res.ok) {
-    throw new Error(`tcgcsv request failed: ${res.status} ${res.statusText} — ${url}`);
-  }
-  return res.json();
+  requestQueue=job.catch(()=>{});
+  return job;
 }
 
 async function listCategories() {
@@ -83,7 +90,7 @@ async function getProductsWithPrices(categoryId, groupId) {
 function isCard(product) {
   const name=String(product.name||"");
   return !isSealed(name) &&
-    !/\\b(?:booster|display|box|case|bundle|starter|deck|pack|sleeve|playmat|promo pack|collection)\\b/i.test(name);
+    !/\b(?:booster|display|box|case|bundle|starter|deck|pack|sleeve|playmat|promo pack|collection)\\b/i.test(name);
 }
 function topChases(products) {
   const candidates=[];
@@ -114,16 +121,19 @@ function isSealed(name) {
 async function compareBoxes(categoryNameFragment) {
   const category = await findCategoryByName(categoryNameFragment);
   const groups = await listGroups(category.categoryId);
+  const selected=groups.filter(g=>g.publishedOn && !Number.isNaN(Date.parse(g.publishedOn)) && Date.parse(g.publishedOn)<=Date.now()).sort((a,b)=>Date.parse(b.publishedOn)-Date.parse(a.publishedOn)).slice(0,categoryNameFragment==="riftbound"?30:12);
 
   const results = [];
-  for (const group of groups) {
+  for (const group of selected) {
     const products = await getProductsWithPrices(category.categoryId, group.groupId);
     const chases=topChases(products);
+    if(chases.length<3)continue;
     for (const p of products) {
-      if (!isSealed(p.name)) continue;
+      if (!isSealed(p.name) || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice)) continue;
       results.push({
         set: group.name,
         groupId: group.groupId,
+        releaseDate: group.publishedOn,
         product: p.name,
         productId: p.productId,
         marketPrice: p.price?.marketPrice ?? null,
@@ -143,4 +153,13 @@ module.exports = {
   listGroups,
   getProductsWithPrices,
   compareBoxes,
+  GAME_NAMES,
+  async getGameBoxes(key) {
+    if(!Object.hasOwn(GAME_NAMES,key))throw new Error("Unsupported game");
+    const cached=resultCache.get(key);
+    if(cached && Date.now()-cached.at<CACHE_MS)return cached.value;
+    const value=await compareBoxes(GAME_NAMES[key]);
+    resultCache.set(key,{at:Date.now(),value});
+    return value;
+  },
 };
