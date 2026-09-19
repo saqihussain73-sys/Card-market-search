@@ -6,7 +6,7 @@
 //   product  = a sealed item or a card within a group
 
 const BASE = "https://tcgcsv.com/tcgplayer";
-const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Disney Lorcana",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
+const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",altered:"Altered",unionarena:"Union Arena"};
 const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
 let nextRequest=0;
@@ -59,8 +59,7 @@ async function findCategoryByName(nameFragment) {
     c.name.toLowerCase().includes(nameFragment.toLowerCase())
   );
   if (!match) {
-    const names = categories.map((c) => c.name).sort().join(", ");
-    throw new Error(`No tcgcsv category matching "${nameFragment}". Available: ${names}`);
+    throw new Error(`Pricing category unavailable for "${nameFragment}".`);
   }
   return match;
 }
