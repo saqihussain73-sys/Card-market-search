@@ -24,7 +24,7 @@ app.listen(PORT, () => {
  console.log(`Card Market Search listening on ${PORT}`);
  // Warm smaller catalogues first. Larger scans run only after these finish.
  setTimeout(async()=>{
-  for(const game of ["riftbound","gundam","lorcana","starwars","altered","unionarena","onepiece","pokemon","magic"]){
+  for(const game of ["riftbound","gundam","lorcana","starwars","unionarena","onepiece","pokemon","magic"]){
    try{await tcgcsv.getGameBoxes(game);console.log("Cache ready:",game);}
    catch(err){console.warn("Cache warmup skipped:",game,err.message);}
   }
