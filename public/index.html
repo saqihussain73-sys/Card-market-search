@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Card Market Search — Riftbound</title>
+<title>Card Market Search — Sealed Collections</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}*{box-sizing:border-box}
 body{margin:0;background:#0d121b;color:#f4f6fc;padding:16px;line-height:1.45}main{max-width:1050px;margin:auto}
@@ -24,8 +24,8 @@ details>small,.chase-note{display:block;padding:0 14px 12px;color:#aab8ca;font-s
 .collect{display:flex;align-items:center;gap:10px;padding:13px;background:#202a39;border:1px solid #344258;border-radius:10px;cursor:pointer;font-size:.9rem}
 .collect input{width:19px;height:19px;accent-color:#4678ee;flex-shrink:0}.note{font-size:.8rem;color:#a8b0c2;margin-top:18px}
 @media(max-width:390px){body{padding:12px}.box-card{padding:13px}.chase-row{grid-template-columns:24px minmax(0,1fr)}.chase-price{grid-column:2;text-align:left}.prices{gap:6px}}
-</style></head><body><main><h1>Card Market Search</h1><p class="sub">Riftbound · Individual sealed booster boxes</p>
-<div class="toolbar"><div><strong>Riftbound sealed collection</strong><div class="muted" id="collection-count">0 collected</div></div><button id="load-btn">Refresh prices</button></div>
-<div id="status" role="status">Loading Riftbound booster boxes…</div><section id="results" class="grid" aria-label="Riftbound booster boxes"></section>
+select{display:block;margin-top:6px;background:#202a39;color:#f4f6fc;border:1px solid #42516a;border-radius:10px;padding:11px;max-width:100%;font:inherit}</style></head><body><main><h1>Card Market Search</h1><p class="sub">Individual sealed booster boxes · Established and emerging games</p>
+<div class="toolbar"><label for="game-select">Game <select id="game-select" aria-label="Trading card game"></select></label><div><strong>Sealed collection</strong><div class="muted" id="collection-count">0 collected</div></div><button id="load-btn">Refresh prices</button></div>
+<div id="status" role="status">Loading booster boxes…</div><section id="results" class="grid" aria-label="Riftbound booster boxes"></section>
 <p class="note">USD prices from TCGplayer's daily mirror, not live UK retail offers. Collection selections are saved in this browser only.</p>
 <script src="/app.js"></script></main></body></html>
