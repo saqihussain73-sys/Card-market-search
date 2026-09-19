@@ -5,7 +5,7 @@ async function loadCompareBoxes(){
  try{
   const res=await fetch(`/api/compare-boxes?game=${encodeURIComponent(game)}`),data=await res.json();
   if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
-  statusEl.textContent=`${data.boxes.length} sealed products found for ${data.category}. Prices are from a daily mirror, not live transactions.`;
+  statusEl.textContent=`${data.boxes.length} individual booster boxes found for ${data.category}. Prices are from a daily mirror, not live transactions.`;
   const money=n=>Number.isFinite(n)?`$${n.toFixed(2)}`:"n/a";
   resultsEl.innerHTML=`<table><thead><tr><th>Set</th><th>Product</th><th>Market price</th><th>Low price</th></tr></thead><tbody>${data.boxes.map(b=>`<tr><td>${escapeHtml(b.set)}</td><td>${escapeHtml(b.product)}</td><td class="price">${money(b.marketPrice)}</td><td class="price">${money(b.lowPrice)}</td></tr>`).join("")}</tbody></table>`;
  }catch(err){statusEl.textContent=`Error: ${err.message}`;statusEl.className="error";}finally{loadBtn.disabled=false;}
