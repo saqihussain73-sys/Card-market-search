@@ -1,3 +1,21 @@
+const ceForm=document.getElementById("ce-test-form");
+ceForm.addEventListener("submit",async event=>{
+ event.preventDefault();
+ const button=document.getElementById("ce-test-btn"),result=document.getElementById("ce-test-result");
+ const params=new URLSearchParams({game:document.getElementById("ce-game").value,set:document.getElementById("ce-set").value.trim(),product:document.getElementById("ce-product").value.trim(),type:document.getElementById("ce-type").value});
+ button.disabled=true;result.textContent="Checking Card Empire directly…";result.className="";
+ try{
+  const response=await fetch("/api/retail/card-empire?"+params);
+  if(!response.ok)throw Error("Retailer lookup unavailable (HTTP "+response.status+")");
+  const data=await response.json();result.replaceChildren();
+  if(data.offer && Number.isFinite(data.offer.priceGBP) && /^https:\/\/www\.cardempire\.com\/products\//.test(data.offer.url)){
+   const label=document.createElement("div");label.textContent=data.offer.name+" · £"+data.offer.priceGBP.toFixed(2)+" (online listed price)";
+   const link=document.createElement("a");link.href=data.offer.url;link.target="_blank";link.rel="noopener noreferrer";link.textContent="Open exact Card Empire product page";
+   result.append(label,link);
+  }else result.textContent="No verified exact match and GBP price found. This does not confirm the product is unavailable.";
+ }catch(error){result.textContent="Lookup error: "+error.message;result.className="error";}
+ finally{button.disabled=false;}
+});
 const statusEl=document.getElementById("status");
 const resultsEl=document.getElementById("results");
 const loadBtn=document.getElementById("load-btn");
