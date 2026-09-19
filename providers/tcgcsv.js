@@ -6,7 +6,7 @@
 //   product  = a sealed item or a card within a group
 
 const BASE = "https://tcgcsv.com/tcgplayer";
-const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",unionarena:"Union Arena"};
+const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super Fusion World",fleshandblood:"Flesh & Blood TCG",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse Evolve",yugioh:"YuGiOh"};
 const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
 let nextRequest=0;
@@ -62,9 +62,7 @@ async function listCategories() {
 
 async function findCategoryByName(nameFragment) {
   const categories = await listCategories();
-  const match = categories.find((c) => c.name.toLowerCase()===nameFragment.toLowerCase()) || categories.find((c) =>
-    c.name.toLowerCase().includes(nameFragment.toLowerCase())
-  );
+  const match = categories.find((c) => c.name.toLowerCase()===nameFragment.toLowerCase());
   if (!match) {
     throw new Error(`Pricing category unavailable for "${nameFragment}".`);
   }
