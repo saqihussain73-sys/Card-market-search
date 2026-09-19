@@ -11,6 +11,8 @@ const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
 let nextRequest=0;
 let requestQueue=Promise.resolve();
+const pendingGames=new Map();
+const groupCache=new Map();
 
 // Match individual sealed booster boxes/displays only; exclude bulk cases and packs.
 const BOX_PATTERN = /\b(?:booster\s*(?:box|display)|display\s*box|booster\s*pack\s*display)\b/i;
@@ -30,16 +32,21 @@ function sleep(ms) {
 }
 
 async function getJson(url) {
-  const job=requestQueue.then(async()=>{
+  // Rate-limit request starts, not entire network round trips.
+  const slot=requestQueue.then(async()=>{
     const wait=Math.max(0,nextRequest-Date.now());
     if(wait)await sleep(wait);
-    nextRequest=Date.now()+150;
-    const res=await fetch(url,{headers:{"User-Agent":USER_AGENT}});
-    if(!res.ok)throw new Error(`tcgcsv request failed: ${res.status} ${res.statusText}`);
-    return res.json();
+    nextRequest=Date.now()+200;
   });
-  requestQueue=job.catch(()=>{});
-  return job;
+  requestQueue=slot.catch(()=>{});
+  await slot;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort(),12000);
+  try{
+    const res=await fetch(url,{headers:{"User-Agent":USER_AGENT},signal:controller.signal});
+    if(!res.ok)throw new Error(`tcgcsv request failed: ${res.status} ${res.statusText}`);
+    return await res.json();
+  }finally{clearTimeout(timeout);}
 }
 
 async function listCategories() {
@@ -123,8 +130,16 @@ async function compareBoxes(categoryNameFragment) {
   const selected=groups.filter(g=>g.groupId && g.publishedOn && !Number.isNaN(Date.parse(g.publishedOn)) && Date.parse(g.publishedOn)<=Date.now()).sort((a,b)=>Date.parse(b.publishedOn)-Date.parse(a.publishedOn));
 
   const results = [];
-  for (const group of selected) {
-    const products = await getProductsWithPrices(category.categoryId, group.groupId);
+  let cursor=0;
+  async function worker(){
+  while(cursor<selected.length){
+    const group=selected[cursor++];
+    const cacheKey=category.categoryId+":"+group.groupId;
+    let products=groupCache.get(cacheKey);
+    if(!products){
+      try{products=await getProductsWithPrices(category.categoryId,group.groupId);groupCache.set(cacheKey,products);}
+      catch(err){console.warn("Skipping unavailable group",group.groupId,err.message);continue;}
+    }
     const chases=topChases(products);
     if(chases.length<1)continue;
     for (const p of products) {
@@ -142,6 +157,8 @@ async function compareBoxes(categoryNameFragment) {
       });
     }
   }
+  }
+  await Promise.all(Array.from({length:4},()=>worker()));
   results.sort((a, b) => (b.marketPrice ?? 0) - (a.marketPrice ?? 0));
   return { category: category.name, categoryId: category.categoryId, boxes: results };
 }
@@ -157,8 +174,9 @@ module.exports = {
     if(!Object.hasOwn(GAME_NAMES,key))throw new Error("Unsupported game");
     const cached=resultCache.get(key);
     if(cached && Date.now()-cached.at<CACHE_MS)return cached.value;
-    const value=await compareBoxes(GAME_NAMES[key]);
-    resultCache.set(key,{at:Date.now(),value});
-    return value;
+    if(pendingGames.has(key))return pendingGames.get(key);
+    const job=compareBoxes(GAME_NAMES[key]).then(value=>{resultCache.set(key,{at:Date.now(),value});return value;}).finally(()=>pendingGames.delete(key));
+    pendingGames.set(key,job);
+    return job;
   },
 };
