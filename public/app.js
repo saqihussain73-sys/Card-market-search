@@ -7,6 +7,14 @@ const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic
 let currentGame="riftbound";
 let loadSequence=0;
 const viewCache=new Map();
+const SNAPSHOT_PREFIX="card-market-search:game-snapshot:v2:";
+function savedGame(game){
+ try{const data=JSON.parse(localStorage.getItem(SNAPSHOT_PREFIX+game)||"null");return data&&Array.isArray(data.boxes)?data:null;}catch{return null;}
+}
+function rememberGame(game,data){
+ viewCache.set(game,data);
+ try{localStorage.setItem(SNAPSHOT_PREFIX+game,JSON.stringify(data));}catch{}
+}
 let collected;
 try { collected=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")); }
 catch { collected=new Set(); }
@@ -66,27 +74,40 @@ function updateTypes(boxes){
  }
  typeSelector.value=[...typeSelector.options].some(option=>option.value===previous)?previous:"booster";
 }
-typeSelector.addEventListener("change",()=>loadCompareBoxes());
+typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value="booster";loadCompareBoxes();});
-async function loadCompareBoxes(){
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value="booster";loadCompareBoxes(false);});
+async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
  loadBtn.disabled=true;statusEl.className="";
  statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
- resultsEl.replaceChildren();
  try{
-  let data=viewCache.get(game);
-  if(!data){
-   const response=await fetch("/api/game/"+encodeURIComponent(game));
-   data=await response.json();
-   if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
-   viewCache.set(game,data);
+  let data=viewCache.get(game)||savedGame(game);
+  if(data&&!force){renderGame(game,data);loadBtn.disabled=false;return;}
+  const response=await fetch("/api/game/"+encodeURIComponent(game),{cache:"no-store"});
+  const incoming=await response.json();
+  if(response.status===202){
+   if(sequence!==loadSequence)return;
+   if(data)renderGame(game,data);
+   statusEl.textContent=GAMES[game]+" is scanning for the first time. "+(data?"Showing saved results. ":"")+"Checking again in 5 seconds…";
+   setTimeout(()=>{if(sequence===loadSequence)loadCompareBoxes(true);},5000);
+   return;
   }
+  if(!response.ok)throw new Error(incoming.error||"HTTP "+response.status);
+  data=incoming;
+  rememberGame(game,data);
   if(sequence!==loadSequence)return;
+  renderGame(game,data);
+ }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
+ finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
+}
+function renderGame(game,data){
+ if(game!==currentGame)return;
   updateTypes(data.boxes);
   const boxes=data.boxes.filter(box=>typeSelector.value==="all" || (box.type||"booster")===typeSelector.value);
+  resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+TYPES[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
   for(const box of boxes){
    const id=game+":"+String(box.productId);
@@ -103,8 +124,7 @@ async function loadCompareBoxes(){
    });
    resultsEl.appendChild(card);
   }
- }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
- finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
+
 }
-loadBtn.addEventListener("click",loadCompareBoxes);
+loadBtn.addEventListener("click",()=>loadCompareBoxes(true));
 updateCount();loadCompareBoxes();
