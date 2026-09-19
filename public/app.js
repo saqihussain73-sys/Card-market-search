@@ -52,9 +52,23 @@ function chaseSection(chases) {
  '<small>USD market prices from TCGplayer daily mirror. Variants may represent the same card.</small></details>';
 }
 function updateCount(){countEl.textContent=collected.size+" collected";}
+const typeSelector=document.getElementById("type-select");
+const TYPES={booster:"Booster boxes",etb:"Elite Trainer Boxes",tin:"Tins",bundle:"Bundles & collections",deck:"Starter decks",all:"All sealed products"};
+function updateTypes(boxes){
+ const available=new Set(boxes.map(box=>box.type||"booster"));
+ const previous=typeSelector.value;
+ typeSelector.replaceChildren();
+ for(const [value,label] of Object.entries(TYPES)){
+  if(value!=="all" && value!=="booster" && !available.has(value))continue;
+  if(value==="all" && available.size<2)continue;
+  const option=document.createElement("option");option.value=value;option.textContent=label;typeSelector.appendChild(option);
+ }
+ typeSelector.value=[...typeSelector.options].some(option=>option.value===previous)?previous:"booster";
+}
+typeSelector.addEventListener("change",()=>loadCompareBoxes());
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;loadCompareBoxes();});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value="booster";loadCompareBoxes();});
 async function loadCompareBoxes(){
  const game=currentGame;
  const sequence=++loadSequence;
@@ -70,8 +84,10 @@ async function loadCompareBoxes(){
    viewCache.set(game,data);
   }
   if(sequence!==loadSequence)return;
-  statusEl.textContent=data.boxes.length+" priced booster boxes for "+GAMES[game]+". Prices are from a daily mirror.";
-  for(const box of data.boxes){
+  updateTypes(data.boxes);
+  const boxes=data.boxes.filter(box=>typeSelector.value==="all" || (box.type||"booster")===typeSelector.value);
+  statusEl.textContent=boxes.length+" priced "+TYPES[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
+  for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
