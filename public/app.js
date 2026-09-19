@@ -1,13 +1,37 @@
-const statusEl=document.getElementById("status"),resultsEl=document.getElementById("results"),gameInput=document.getElementById("game-input"),loadBtn=document.getElementById("load-btn");
+const statusEl=document.getElementById("status");
+const resultsEl=document.getElementById("results");
+const loadBtn=document.getElementById("load-btn");
+const countEl=document.getElementById("collection-count");
+const STORAGE_KEY="card-market-search:riftbound:collected:v1";
+let collected;
+try { collected=new Set(JSON.parse(localStorage.getItem(STORAGE_KEY)||"[]")); }
+catch { collected=new Set(); }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function money(n){return Number.isFinite(n)?"$"+n.toFixed(2):"Not available";}
+function updateCount(){countEl.textContent=collected.size+" collected";}
 async function loadCompareBoxes(){
- const game=gameInput.value.trim()||"riftbound";loadBtn.disabled=true;resultsEl.replaceChildren();statusEl.textContent=`Fetching prices for ${game}…`;
+ loadBtn.disabled=true;statusEl.className="";statusEl.textContent="Fetching Riftbound prices…";resultsEl.replaceChildren();
  try{
-  const res=await fetch(`/api/compare-boxes?game=${encodeURIComponent(game)}`),data=await res.json();
-  if(!res.ok)throw new Error(data.error||`HTTP ${res.status}`);
-  statusEl.textContent=`${data.boxes.length} individual booster boxes found for ${data.category}. Prices are from a daily mirror, not live transactions.`;
-  const money=n=>Number.isFinite(n)?`$${n.toFixed(2)}`:"n/a";
-  resultsEl.innerHTML=`<table><thead><tr><th>Set</th><th>Product</th><th>Market price</th><th>Low price</th></tr></thead><tbody>${data.boxes.map(b=>`<tr><td>${escapeHtml(b.set)}</td><td>${escapeHtml(b.product)}</td><td class="price">${money(b.marketPrice)}</td><td class="price">${money(b.lowPrice)}</td></tr>`).join("")}</tbody></table>`;
- }catch(err){statusEl.textContent=`Error: ${err.message}`;statusEl.className="error";}finally{loadBtn.disabled=false;}
+  const response=await fetch("/api/compare-boxes?game=riftbound");
+  const data=await response.json();
+  if(!response.ok)throw new Error(data.error||"HTTP "+response.status);
+  statusEl.textContent=data.boxes.length+" individual booster boxes found. Prices are from a daily mirror.";
+  for(const box of data.boxes){
+   const id=String(box.productId);
+   const card=document.createElement("article");card.className="box-card";
+   card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
+    '<div class="prices"><div><small>Market price (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
+    '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
+    '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
+   card.querySelector("input").addEventListener("change",event=>{
+    if(event.target.checked)collected.add(id);else collected.delete(id);
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify([...collected]));}catch{}
+    updateCount();
+   });
+   resultsEl.appendChild(card);
+  }
+ }catch(error){statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
+ finally{loadBtn.disabled=false;updateCount();}
 }
-loadBtn.addEventListener("click",loadCompareBoxes);gameInput.addEventListener("keydown",e=>{if(e.key==="Enter")loadCompareBoxes()});loadCompareBoxes();
+loadBtn.addEventListener("click",loadCompareBoxes);
+updateCount();loadCompareBoxes();
