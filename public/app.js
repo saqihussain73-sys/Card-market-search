@@ -41,7 +41,7 @@ function buyLinks(box,game="riftbound") {
  const local=link("CardboardCrack · Stretford","https://www.google.com/search?q="+encodeURIComponent("site:cardboardcrack.co.uk "+query))+
   link("Pulse Collective · Middleton","https://www.google.com/search?q="+encodeURIComponent("site:pulsecollective.co.uk "+query))+
   link("Fan Boy Three · Manchester","https://www.google.com/search?q="+encodeURIComponent("Fan Boy Three Manchester "+query))+
-  link("Card Empire · Afflecks","https://www.google.com/search?q="+encodeURIComponent("Card Empire Afflecks "+query));
+  "";
  const highStreet=game==="pokemon"?'<div class="chase-meta">High-street shops · check local availability</div><div class="buy-links">'+
   link("Argos · search","https://www.argos.co.uk/search/"+encoded+"/")+
   link("Smyths Toys · search","https://www.google.com/search?q="+encodeURIComponent("site:smythstoys.com/uk/en-gb "+query))+'</div>':"";
@@ -53,6 +53,26 @@ function buyLinks(box,game="riftbound") {
   '<small>Links are searches unless marked exact product. No UK stock or checkout price is verified. Match game, set, language, edition and sealed condition; compare delivery and import costs. USD scanner prices are US market references, not UK offers.</small></details>';
 }
 
+async function showCardEmpire(card,box,game){
+ if(!["pokemon","yugioh"].includes(game))return;
+ try{
+  const params=new URLSearchParams({game,product:box.product,set:box.set,type:box.type||"booster"});
+  const response=await fetch("/api/retail/card-empire?"+params);
+  if(!response.ok)return;
+  const data=await response.json(),offer=data.offer;
+  if(!offer||!Number.isFinite(offer.priceGBP)||offer.priceGBP<=0||!/^https:\/\/www\.cardempire\.com\/products\//.test(offer.url))return;
+  if(!card.isConnected)return;
+  const links=card.querySelector(".buy .buy-links:last-of-type");
+  const section=document.createElement("div");
+  section.className="card-empire-offer";
+  const label=document.createElement("div");label.className="chase-meta";label.textContent="Card Empire · online listed price";
+  const row=document.createElement("div");row.className="buy-links";
+  const link=document.createElement("a");link.href=offer.url;link.target="_blank";link.rel="noopener noreferrer";
+  link.textContent="Card Empire · £"+offer.priceGBP.toFixed(2)+" · exact product page";
+  row.appendChild(link);section.append(label,row);
+  const note=card.querySelector(".buy small");note.before(section);
+ }catch{}
+}
 function gradedSection(card) {
  const grades=card.gradedPrices;
  if(!grades || typeof grades!=="object")return "";
@@ -120,6 +140,7 @@ async function loadCompareBoxes(){
     updateCount();
    });
    resultsEl.appendChild(card);
+   showCardEmpire(card,box,game);
   }
  }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
  finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
