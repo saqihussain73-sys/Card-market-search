@@ -20,4 +20,13 @@ app.get("/api/game/:key",async(req,res)=>{
  catch(err){console.error(err);res.status(502).json({error:err.message});}
 });
 app.get("/health", (req,res) => res.json({ok:true}));
-app.listen(PORT, () => console.log(`Card Market Search listening on ${PORT}`));
+app.listen(PORT, () => {
+ console.log(`Card Market Search listening on ${PORT}`);
+ // Warm smaller catalogues first. Larger scans run only after these finish.
+ setTimeout(async()=>{
+  for(const game of ["riftbound","gundam","lorcana","starwars","altered","unionarena","onepiece","pokemon","magic"]){
+   try{await tcgcsv.getGameBoxes(game);console.log("Cache ready:",game);}
+   catch(err){console.warn("Cache warmup skipped:",game,err.message);}
+  }
+ },3000);
+});
