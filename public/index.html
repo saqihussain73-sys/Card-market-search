@@ -3,18 +3,27 @@
 <title>Card Market Search — Riftbound</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}*{box-sizing:border-box}
-body{margin:0;background:#0e1118;color:#f0f2f8;padding:20px;line-height:1.45}
-main{max-width:950px;margin:auto}h1{margin:0;font-size:clamp(1.6rem,5vw,2.4rem)}
-.sub,.muted{color:#a8b0c2}.sub{margin:6px 0 22px}.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-button{background:#4678ee;color:white;border:0;border-radius:10px;padding:12px 16px;font:inherit;cursor:pointer}button:disabled{opacity:.5}
-#status{margin:16px 0;color:#b7c4db}#status.error{color:#ff9e9e}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:14px}
-.box-card{border:1px solid #343d4e;background:#191f2b;border-radius:16px;padding:18px;min-width:0}
-.box-card h2{margin:0 0 4px;font-size:1.25rem}.product{color:#b4bfd0;min-height:2.7em;margin:0 0 16px}
-.prices{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0;border-top:1px solid #364052}
-.prices strong{display:block;font-size:1.35rem;font-variant-numeric:tabular-nums}.prices small{color:#a8b0c2}
-.collect{display:flex;align-items:center;gap:9px;padding-top:12px;cursor:pointer}.collect input{width:18px;height:18px;accent-color:#4678ee}
-.note{font-size:.85rem;color:#a8b0c2;margin-top:18px}
+body{margin:0;background:#0d121b;color:#f4f6fc;padding:16px;line-height:1.45}main{max-width:1050px;margin:auto}
+h1{margin:0;font-size:clamp(1.6rem,5vw,2.3rem)}.sub,.muted,.product,.release{color:#aebbd0}.sub{margin:5px 0 20px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+button{background:#4678ee;color:white;border:0;border-radius:10px;padding:11px 15px;font:inherit;cursor:pointer}button:disabled{opacity:.5}
+#status{margin:12px 0;color:#b7c4db}#status.error{color:#ff9e9e}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:16px}
+.box-card{border:1px solid #344258;background:linear-gradient(135deg,#1c2533,#171e2a);border-radius:18px;padding:18px;min-width:0}
+.box-card h2{margin:0;font-size:1.5rem}.product{margin:3px 0 12px;font-size:.95rem}.release{font-size:.88rem;margin:0 0 16px}
+details{border:1px solid #344258;border-radius:12px;margin:10px 0;background:#202a39;overflow:hidden}
+summary{cursor:pointer;padding:13px 14px;font-weight:650;list-style:none;display:flex;align-items:center;gap:9px}
+summary::-webkit-details-marker{display:none}summary:before{content:"›";font-size:1.35rem;color:#a9c5ff;line-height:1;transition:transform .15s}details[open]>summary:before{transform:rotate(90deg)}
+.buy-links{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 12px}.buy-links a{color:#dbe8ff;text-decoration:none;background:#31466a;border-radius:8px;padding:9px 12px;font-size:.88rem}
+details>small,.chase-note{display:block;padding:0 14px 12px;color:#aab8ca;font-size:.76rem}
+.chase-list{display:grid;gap:8px;padding:0 10px 12px}.chase-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:9px;align-items:center;background:#192331;border:1px solid #303e52;border-radius:10px;padding:10px}
+.rank{display:grid;place-items:center;border-radius:50%;width:27px;height:27px;background:#b99045;color:#15191f;font-weight:800;font-size:.82rem}
+.chase-name{font-size:.9rem;font-weight:650;overflow-wrap:anywhere}.chase-meta{font-size:.75rem;color:#aebbd0;margin-top:3px}.chase-price{font-size:.96rem;font-weight:750;white-space:nowrap;text-align:right}
+.prices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:16px 0;border-top:1px solid #364052;margin-top:15px}
+.prices strong{display:block;font-size:clamp(1.12rem,4vw,1.5rem);font-variant-numeric:tabular-nums}.prices small{color:#a8b0c2}
+.collect{display:flex;align-items:center;gap:10px;padding:13px;background:#202a39;border:1px solid #344258;border-radius:10px;cursor:pointer;font-size:.9rem}
+.collect input{width:19px;height:19px;accent-color:#4678ee;flex-shrink:0}.note{font-size:.8rem;color:#a8b0c2;margin-top:18px}
+@media(max-width:390px){body{padding:12px}.box-card{padding:13px}.chase-row{grid-template-columns:24px minmax(0,1fr)}.chase-price{grid-column:2;text-align:left}.prices{gap:6px}}
 </style></head><body><main><h1>Card Market Search</h1><p class="sub">Riftbound · Individual sealed booster boxes</p>
 <div class="toolbar"><div><strong>Riftbound sealed collection</strong><div class="muted" id="collection-count">0 collected</div></div><button id="load-btn">Refresh prices</button></div>
 <div id="status" role="status">Loading Riftbound booster boxes…</div><section id="results" class="grid" aria-label="Riftbound booster boxes"></section>
