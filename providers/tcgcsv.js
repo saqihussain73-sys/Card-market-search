@@ -13,8 +13,8 @@ let nextRequest=0;
 let requestQueue=Promise.resolve();
 
 // Match individual sealed booster boxes/displays only; exclude bulk cases and packs.
-const BOX_PATTERN = /\b(?:booster box|booster display|display box)\b/i;
-const EXCLUDE_PATTERN = /\b(?:case|carton|pack|bundle|collection|elite trainer|starter|deck|sleeve|mini box|gift|promo|promotional)\b/i;
+const BOX_PATTERN = /\b(?:booster\s*(?:box|display)|display\s*box|booster\s*pack\s*display)\b/i;
+const EXCLUDE_PATTERN = /\b(?:case|carton|bundle|collection|elite trainer|starter|deck|sleeve|mini box|gift|promo|promotional)\b/i;
 
 let categoryCache = null;
 let categoryCacheAt = 0;
@@ -55,7 +55,7 @@ async function listCategories() {
 
 async function findCategoryByName(nameFragment) {
   const categories = await listCategories();
-  const match = categories.find((c) =>
+  const match = categories.find((c) => c.name.toLowerCase()===nameFragment.toLowerCase()) || categories.find((c) =>
     c.name.toLowerCase().includes(nameFragment.toLowerCase())
   );
   if (!match) {
@@ -120,15 +120,15 @@ function isSealed(name) {
 async function compareBoxes(categoryNameFragment) {
   const category = await findCategoryByName(categoryNameFragment);
   const groups = await listGroups(category.categoryId);
-  const selected=groups.filter(g=>g.publishedOn && !Number.isNaN(Date.parse(g.publishedOn)) && Date.parse(g.publishedOn)<=Date.now()).sort((a,b)=>Date.parse(b.publishedOn)-Date.parse(a.publishedOn)).slice(0,categoryNameFragment==="riftbound"?30:12);
+  const selected=groups.filter(g=>g.groupId && g.publishedOn && !Number.isNaN(Date.parse(g.publishedOn)) && Date.parse(g.publishedOn)<=Date.now()).sort((a,b)=>Date.parse(b.publishedOn)-Date.parse(a.publishedOn));
 
   const results = [];
   for (const group of selected) {
     const products = await getProductsWithPrices(category.categoryId, group.groupId);
     const chases=topChases(products);
-    if(chases.length<3)continue;
+    if(chases.length<1)continue;
     for (const p of products) {
-      if (!isSealed(p.name) || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice)) continue;
+      if (!isSealed(p.name) || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice) || p.price.lowPrice<=0) continue;
       results.push({
         set: group.name,
         groupId: group.groupId,
