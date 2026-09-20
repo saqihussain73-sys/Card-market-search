@@ -4,6 +4,8 @@ const loadBtn=document.getElementById("load-btn");
 const countEl=document.getElementById("collection-count");
 const STORAGE_KEY="card-market-search:riftbound:collected:v1";
 const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super: Fusion World",fleshandblood:"Flesh and Blood",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse: Evolve",yugioh:"Yu-Gi-Oh!"};
+const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
+Object.assign(GAMES,SPORTS);
 let currentGame="riftbound";
 let loadSequence=0;
 const viewCache=new Map();
@@ -62,22 +64,25 @@ function chaseSection(chases) {
 }
 function updateCount(){countEl.textContent=collected.size+" collected";}
 const typeSelector=document.getElementById("type-select");
+const SPORTS_TYPES={hobby:"Hobby boxes",retail:"Retail boxes",pack:"Individual packs",all:"All sports products"};
 const TYPES={booster:"Booster boxes",etb:"Elite Trainer Boxes",tin:"Tins",bundle:"Bundles & collections",deck:"Starter decks",all:"All sealed products"};
 function updateTypes(boxes){
+ const sports=Object.hasOwn(SPORTS,currentGame);
+ const labels=sports?SPORTS_TYPES:TYPES;
  const available=new Set(boxes.map(box=>box.type||"booster"));
  const previous=typeSelector.value;
  typeSelector.replaceChildren();
- for(const [value,label] of Object.entries(TYPES)){
-  if(value!=="all" && value!=="booster" && !available.has(value))continue;
+ for(const [value,label] of Object.entries(labels)){
+  if(value!=="all" && !available.has(value))continue;
   if(value==="all" && available.size<2)continue;
   const option=document.createElement("option");option.value=value;option.textContent=label;typeSelector.appendChild(option);
  }
- typeSelector.value=[...typeSelector.options].some(option=>option.value===previous)?previous:"booster";
+ typeSelector.value=[...typeSelector.options].some(option=>option.value===previous)?previous:(sports?"hobby":"booster");
 }
 typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value="booster";loadCompareBoxes(false);});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=Object.hasOwn(SPORTS,currentGame)?"hobby":"booster";loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
@@ -108,12 +113,12 @@ function renderGame(game,data){
   updateTypes(data.boxes);
   const boxes=data.boxes.filter(box=>typeSelector.value==="all" || (box.type||"booster")===typeSelector.value);
   resultsEl.replaceChildren();
-  statusEl.textContent=boxes.length+" priced "+TYPES[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
+  statusEl.textContent=boxes.length+" priced "+(Object.hasOwn(SPORTS,game)?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">Release: '+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box,game)+chaseSection(box.chases)+
+    '<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box,game)+chaseSection(box.chases)+
     '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
