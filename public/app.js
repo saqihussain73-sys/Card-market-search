@@ -4,6 +4,19 @@ const loadBtn=document.getElementById("load-btn");
 const countEl=document.getElementById("collection-count");
 const STORAGE_KEY="card-market-search:riftbound:collected:v1";
 const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super: Fusion World",fleshandblood:"Flesh and Blood",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse: Evolve",yugioh:"Yu-Gi-Oh!"};
+const LIMITED_GAMES=new Set(["pokemon","yugioh"]);
+const PRICE_FILTERS={250:"Up to $250",all:"All prices"};
+const SORT_FILTERS={cheapest:"Cheapest first",newest:"Newest sets first",expensive:"Most expensive first"};
+const filterBar=document.getElementById("limited-filters");
+const priceFilter=document.getElementById("price-filter");
+const sortFilter=document.getElementById("sort-filter");
+function syncLimitedFilters(){
+ const limited=LIMITED_GAMES.has(currentGame);
+ filterBar.hidden=!limited;
+ if(limited){priceFilter.value="250";sortFilter.value="cheapest";}
+}
+priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
+sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
 const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
 Object.assign(GAMES,SPORTS);
 let currentGame="riftbound";
@@ -82,7 +95,7 @@ function updateTypes(boxes){
 typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=Object.hasOwn(SPORTS,currentGame)?"hobby":"booster";loadCompareBoxes(false);});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=Object.hasOwn(SPORTS,currentGame)?"hobby":"booster";syncLimitedFilters();loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
@@ -111,7 +124,13 @@ async function loadCompareBoxes(force=false){
 function renderGame(game,data){
  if(game!==currentGame)return;
   updateTypes(data.boxes);
-  const boxes=data.boxes.filter(box=>typeSelector.value==="all" || (box.type||"booster")===typeSelector.value);
+  const limited=LIMITED_GAMES.has(game);
+  const boxes=data.boxes.filter(box=>(typeSelector.value==="all" || (box.type||"booster")===typeSelector.value) && (!limited || priceFilter.value==="all" || (Number.isFinite(box.marketPrice)&&box.marketPrice<=250)));
+  if(limited){
+   if(sortFilter.value==="cheapest")boxes.sort((a,b)=>a.marketPrice-b.marketPrice);
+   else if(sortFilter.value==="expensive")boxes.sort((a,b)=>b.marketPrice-a.marketPrice);
+   else boxes.sort((a,b)=>Date.parse(b.releaseDate||0)-Date.parse(a.releaseDate||0));
+  }
   resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+(Object.hasOwn(SPORTS,game)?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
   for(const box of boxes){
@@ -132,4 +151,4 @@ function renderGame(game,data){
 
 }
 loadBtn.addEventListener("click",()=>loadCompareBoxes(true));
-updateCount();loadCompareBoxes();
+syncLimitedFilters();updateCount();loadCompareBoxes();
