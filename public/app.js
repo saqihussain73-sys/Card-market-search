@@ -82,7 +82,8 @@ function gradedSection(card) {
  return '<div class="chase-meta">'+entries.map(([label,v])=>escapeHtml(label)+': <strong>'+money(v.price)+'</strong> · '+escapeHtml(v.source)+' · '+escapeHtml(new Date(v.updatedAt).toLocaleDateString("en-GB"))).join('<br>')+'</div>';
 }
 function chaseSection(chases) {
- const rows=Array.isArray(chases)?chases:[];
+ const excluded=/\\b(?:booster|display|box|boxes|case|cases|carton|pack|packs|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessory|storage|bulk|sealed|hobby|blaster|hanger|mega|etb)\\b/i;
+ const rows=(Array.isArray(chases)?chases:[]).filter(card=>card&&typeof card.name==="string"&&!excluded.test(card.name)).slice(0,3);
  return '<details class="chases"><summary>🏆 Chase cards (up to 3)</summary>'+
  (rows.length?'<div class="chase-list">'+rows.map((card,i)=>
  '<div class="chase-row"><span class="rank">'+(i+1)+'</span><div><div class="chase-name">'+escapeHtml(card.name)+'</div>'+
