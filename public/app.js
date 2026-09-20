@@ -18,17 +18,12 @@ function syncLimitedFilters(){
 priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
 sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
 Object.assign(GAMES,{pokemonjapan:"Pokémon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
-const TOPPS={
- toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",
- toppsdisney:"Disney",toppswwe:"WWE",toppsgpk:"Garbage Pail Kids",
- toppssoccer:"Football / Soccer",toppsbasketball:"Basketball",toppsamericanfootball:"American football / NFL",
- toppsbaseball:"Baseball / MLB",toppsf1:"Formula 1",toppsufc:"UFC",
- toppshockey:"Ice hockey",toppsboxing:"Boxing",toppstennis:"Tennis",toppsgolf:"Golf",
- toppscricket:"Cricket",toppsracing:"Other motorsport"
-};
-const TOPPS_PRODUCTS={toppsspongebob:["2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Hobby Box","2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Value Box","2025 Topps Chrome SpongeBob SquarePants Sapphire Edition Box"]};
-function toppsData(game){return {topps:true,boxes:(TOPPS_PRODUCTS[game]||[]).map((product,i)=>({set:GAMES[game],product,productId:"topps-"+game+"-"+i,type:/value/i.test(product)?"retail":"hobby",marketPrice:null,lowPrice:null,chases:[],releaseDate:null}))};}
-Object.assign(GAMES,TOPPS);
+const TOPPS={toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",toppsdisney:"Disney",toppswwe:"WWE",toppsgpk:"Garbage Pail Kids",toppssoccer:"Football / Soccer",toppsbasketball:"Basketball",toppsamericanfootball:"American football / NFL",toppsbaseball:"Baseball / MLB",toppsf1:"Formula 1",toppsufc:"UFC",toppshockey:"Ice hockey",toppsboxing:"Boxing",toppstennis:"Tennis",toppsgolf:"Golf",toppscricket:"Cricket",toppsracing:"Other motorsport"};
+GAMES.topps="Topps";
+const toppsCollection=document.getElementById("topps-collection");
+const toppsCollectionWrap=document.getElementById("topps-collection-wrap");
+for(const [key,name] of Object.entries(TOPPS)){const option=document.createElement("option");option.value=key;option.textContent=name;toppsCollection.appendChild(option);}
+toppsCollection.addEventListener("change",()=>loadCompareBoxes(false));
 const SPORTS={};
 const sportsFilters=document.getElementById("sports-filters");
 const makerFilter=document.getElementById("maker-filter");
@@ -104,9 +99,10 @@ const typeSelector=document.getElementById("type-select");
 const SPORTS_TYPES={hobby:"Hobby boxes",retail:"Retail boxes",pack:"Individual packs",all:"All sports products"};
 const TYPES={booster:"Booster boxes",etb:"Elite Trainer Boxes",tin:"Tins",bundle:"Bundles & collections",deck:"Starter decks",all:"All sealed products"};
 function updateTypes(boxes){
- const sports=Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame);
+ const sports=currentGame==="topps";
  const labels=sports?SPORTS_TYPES:TYPES;
  const available=new Set(boxes.map(box=>box.type||"booster"));
+ if(sports){available.add("hobby");available.add("retail");available.add("pack");available.add("all");}
  const previous=typeSelector.value;
  typeSelector.replaceChildren();
  for(const [value,label] of Object.entries(labels)){
@@ -120,12 +116,12 @@ typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){
  const option=document.createElement("option");option.value=key;option.textContent=label;
- const group=Object.hasOwn(TOPPS,key)?"Topps · Sports & entertainment":"Trading card games";
+ const group=key==="topps"?"Manufacturer":"Trading card games";
  let optgroup=[...selector.children].find(el=>el.label===group);
  if(!optgroup){optgroup=document.createElement("optgroup");optgroup.label=group;selector.appendChild(optgroup);}
  optgroup.appendChild(option);
 }
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=(Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame))?"hobby":"booster";syncLimitedFilters();syncSportsFilters();loadCompareBoxes(false);});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=currentGame==="topps"?"all":"booster";toppsCollectionWrap.hidden=currentGame!=="topps";document.getElementById("chase-filter-wrap").hidden=currentGame==="topps";syncLimitedFilters();syncSportsFilters();loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
@@ -134,9 +130,9 @@ async function loadCompareBoxes(force=false){
  loadBtn.disabled=true;statusEl.className="";
  statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
  try{
-  let data=Object.hasOwn(TOPPS,game)?null:(viewCache.get(game)||savedGame(game));
+  let data=game==="topps"?null:(viewCache.get(game)||savedGame(game));
   if(data&&!force){renderGame(game,data);loadBtn.disabled=false;return;}
-  const response=await fetch((Object.hasOwn(TOPPS,game)?"/api/topps/":"/api/game/")+encodeURIComponent(game),{cache:"no-store"});
+  const response=await fetch((game==="topps"?"/api/topps/":"/api/game/")+encodeURIComponent(game==="topps"?toppsCollection.value:game),{cache:"no-store"});
   const incoming=await response.json();
   if(response.status===202){
    if(sequence!==loadSequence)return;
@@ -176,13 +172,13 @@ function renderGame(game,data){
    else if(sportsSort.value==="chase")boxes.sort((a,b)=>(Math.max(0,...(b.chases||[]).map(c=>c.marketPrice||0))/(b.marketPrice||Infinity))-(Math.max(0,...(a.chases||[]).map(c=>c.marketPrice||0))/(a.marketPrice||Infinity)));
   }
   resultsEl.replaceChildren();
-  statusEl.textContent=boxes.length+" priced "+((Object.hasOwn(SPORTS,game)||Object.hasOwn(TOPPS,game))?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
-  if(data.topps){statusEl.textContent=data.status==="credentials_required"?"Topps listing search requires eBay API credentials in Railway.":boxes.length?boxes.length+" Topps UK active listings. Asking prices in GBP; chase prices and expected returns unavailable.":"No qualifying Topps UK listings found for "+GAMES[game]+".";}
+  statusEl.textContent=boxes.length+" priced "+((game==="topps")?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
+  if(data.topps){statusEl.textContent=data.status==="credentials_required"?"Topps listing search requires eBay API credentials in Railway.":boxes.length?boxes.length+" Topps UK active listings. Asking prices in GBP; numbered parallels and autographs are not yet verified per product.":"No qualifying Topps UK listings found for "+GAMES[game]+".";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+(data.topps&&box.listingUrl?'<p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(box.listingUrl)+'">View this eBay listing</a></p>':buyLinks(box,game))+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
+    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+(data.topps&&box.listingUrl?'<p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(box.listingUrl)+'">View this eBay listing</a></p>':buyLinks(box,game))+(data.topps?'<div class="chase-note"><strong>Numbered parallels & autographs</strong><br>1/1 · /5 · /10 · /25 · /50 · /99 · autograph cards: availability and pull odds not verified for this product. Check its official checklist and odds before purchasing.</div>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
     (data.topps?'<div class="prices"><div><small>eBay UK asking price (GBP)</small><strong>'+(Number.isFinite(box.listingPriceGBP)?'£'+box.listingPriceGBP.toFixed(2):'Not available')+'</strong></div><div><small>Price type</small><strong>Active listing</strong></div></div>':'<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>')+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
@@ -196,4 +192,4 @@ function renderGame(game,data){
 
 }
 loadBtn.addEventListener("click",()=>loadCompareBoxes(true));
-syncLimitedFilters();syncSportsFilters();updateCount();loadCompareBoxes();
+syncLimitedFilters();syncSportsFilters();toppsCollectionWrap.hidden=true;document.getElementById("chase-filter-wrap").hidden=false;updateCount();loadCompareBoxes();
