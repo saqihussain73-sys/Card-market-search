@@ -30,9 +30,8 @@ const sportsBudget=document.getElementById("sports-budget");
 const sportsSort=document.getElementById("sports-sort");
 const MAKERS=["Topps","Panini","Upper Deck","Leaf","Fanatics","Futera","Onyx","Wild Card"];
 function manufacturer(box){
- const label=String(box.product||"")+" "+String(box.set||"");
- return MAKERS.find(m=>new RegExp("\\b"+m.replace(/[.*+?^${}()|[\]\\]/g,"\\Object.assign(GAMES,SPORTS);
-")+"\\b","i").test(label))||"Unverified";
+ const label=(String(box.product||"")+" "+String(box.set||"")).toLowerCase();
+ return MAKERS.find(m=>label.includes(m.toLowerCase()))||"Unverified";
 }
 function syncSportsFilters(){sportsFilters.hidden=!Object.hasOwn(SPORTS,currentGame);makerFilter.value="all";sportsBudget.value="all";sportsSort.value="cheapest";}
 for(const el of [makerFilter,sportsBudget,sportsSort])el.addEventListener("change",()=>loadCompareBoxes(false));
