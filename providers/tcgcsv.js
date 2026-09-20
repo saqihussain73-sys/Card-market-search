@@ -98,7 +98,7 @@ async function getProductsWithPrices(categoryId, groupId) {
 }
 
 // Chase candidates must be individual cards, never sealed products or accessories.
-const NON_CARD_PRODUCT=/\\b(?:booster|display|box|boxes|case|cases|carton|pack|packs|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessory|accessories|storage|lot|bulk|sealed|hobby|blaster|hanger|mega|etb)\\b/i;
+const NON_CARD_PRODUCT=new RegExp(String.raw`\\b(?:booster|display|box|boxes|case|cases|carton|pack|packs|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessory|accessories|storage|lot|bulk|sealed|hobby|blaster|hanger|mega|etb)\\b`,"i");
 function isCard(product) {
  const name=String(product.name||"");
  if(!name.trim()||NON_CARD_PRODUCT.test(name))return false;
