@@ -2,6 +2,7 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const tcgcsv = require("./providers/tcgcsv");
+const topps = require("./providers/topps");
 const app = express();
 const PORT = process.env.PORT || 8080;
 app.use(express.static(path.join(__dirname, "public")));
@@ -15,6 +16,7 @@ app.get("/api/compare-boxes", async (req, res) => {
   try { res.json(await tcgcsv.compareBoxes(req.query.game || "riftbound")); }
   catch (err) { console.error(err); res.status(502).json({error:err.message}); }
 });
+app.get("/api/topps/:key",async(req,res)=>{try{const data=await topps.search(req.params.key);if(!data)return res.status(404).json({error:"Unknown Topps collection"});res.json(data);}catch(error){console.error("Topps source:",error.message);res.status(502).json({error:error.message});}});
 app.get("/api/games", (req,res)=>res.json(tcgcsv.GAME_NAMES));
 const cacheDir=process.env.CACHE_DIR||path.join(__dirname,".scan-cache");
 const gameJobs=new Map();
