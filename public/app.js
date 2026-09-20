@@ -18,6 +18,10 @@ function syncLimitedFilters(){
 priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
 sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
 Object.assign(GAMES,{pokemonjapan:"Pokémon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
+const TOPPS={toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",toppsfootball:"Football",toppsbaseball:"Baseball",toppsf1:"Formula 1"};
+Object.assign(GAMES,TOPPS);
+const TOPPS_PRODUCTS={toppsspongebob:["2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Hobby Box","2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Value Box","2025 Topps Chrome SpongeBob SquarePants Sapphire Edition Box"]};
+function toppsData(game){return {topps:true,boxes:(TOPPS_PRODUCTS[game]||[]).map((product,i)=>({set:GAMES[game],product,productId:"topps-"+game+"-"+i,type:/value/i.test(product)?"retail":"hobby",marketPrice:null,lowPrice:null,chases:[],releaseDate:null}))};}
 const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
 Object.assign(GAMES,SPORTS);
 let currentGame="riftbound";
@@ -81,7 +85,7 @@ const typeSelector=document.getElementById("type-select");
 const SPORTS_TYPES={hobby:"Hobby boxes",retail:"Retail boxes",pack:"Individual packs",all:"All sports products"};
 const TYPES={booster:"Booster boxes",etb:"Elite Trainer Boxes",tin:"Tins",bundle:"Bundles & collections",deck:"Starter decks",all:"All sealed products"};
 function updateTypes(boxes){
- const sports=Object.hasOwn(SPORTS,currentGame);
+ const sports=Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame);
  const labels=sports?SPORTS_TYPES:TYPES;
  const available=new Set(boxes.map(box=>box.type||"booster"));
  const previous=typeSelector.value;
@@ -96,10 +100,11 @@ function updateTypes(boxes){
 typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=Object.hasOwn(SPORTS,currentGame)?"hobby":"booster";syncLimitedFilters();loadCompareBoxes(false);});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=(Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame))?"hobby":"booster";syncLimitedFilters();loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
+ if(Object.hasOwn(TOPPS,game)){resultsEl.replaceChildren();renderGame(game,toppsData(game));return;}
  resultsEl.replaceChildren();
  loadBtn.disabled=true;statusEl.className="";
  statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
@@ -134,12 +139,13 @@ function renderGame(game,data){
    else boxes.sort((a,b)=>Date.parse(b.releaseDate||0)-Date.parse(a.releaseDate||0));
   }
   resultsEl.replaceChildren();
-  statusEl.textContent=boxes.length+" priced "+(Object.hasOwn(SPORTS,game)?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
+  statusEl.textContent=boxes.length+" priced "+((Object.hasOwn(SPORTS,game)||Object.hasOwn(TOPPS,game))?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
+  if(data.topps){statusEl.textContent=boxes.length?"Topps "+GAMES[game]+": product catalogue only; prices and chase cards pending a verified data source.":"Topps "+GAMES[game]+": product catalogue and pricing pending.";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+new Date(box.releaseDate).toLocaleDateString('en-GB'))+'</p>'+buyLinks(box,game)+chaseSection(box.chases)+
+    '<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(box.chases))+
     '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
