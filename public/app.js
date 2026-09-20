@@ -24,6 +24,18 @@ const TOPPS_PRODUCTS={toppsspongebob:["2025 Topps Chrome SpongeBob SquarePants 2
 function toppsData(game){return {topps:true,boxes:(TOPPS_PRODUCTS[game]||[]).map((product,i)=>({set:GAMES[game],product,productId:"topps-"+game+"-"+i,type:/value/i.test(product)?"retail":"hobby",marketPrice:null,lowPrice:null,chases:[],releaseDate:null}))};}
 const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
 Object.assign(GAMES,SPORTS);
+const sportsFilters=document.getElementById("sports-filters");
+const makerFilter=document.getElementById("maker-filter");
+const sportsBudget=document.getElementById("sports-budget");
+const sportsSort=document.getElementById("sports-sort");
+const MAKERS=["Topps","Panini","Upper Deck","Leaf","Fanatics","Futera","Onyx","Wild Card"];
+function manufacturer(box){
+ const label=String(box.product||"")+" "+String(box.set||"");
+ return MAKERS.find(m=>new RegExp("\\b"+m.replace(/[.*+?^${}()|[\]\\]/g,"\\Object.assign(GAMES,SPORTS);
+")+"\\b","i").test(label))||"Unverified";
+}
+function syncSportsFilters(){sportsFilters.hidden=!Object.hasOwn(SPORTS,currentGame);makerFilter.value="all";sportsBudget.value="all";sportsSort.value="cheapest";}
+for(const el of [makerFilter,sportsBudget,sportsSort])el.addEventListener("change",()=>loadCompareBoxes(false));
 let currentGame="riftbound";
 let loadSequence=0;
 const viewCache=new Map();
@@ -100,7 +112,7 @@ function updateTypes(boxes){
 typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
 for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
-selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=(Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame))?"hobby":"booster";syncLimitedFilters();loadCompareBoxes(false);});
+selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=(Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame))?"hobby":"booster";syncLimitedFilters();syncSportsFilters();loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
@@ -138,6 +150,18 @@ function renderGame(game,data){
    else if(sortFilter.value==="expensive")boxes.sort((a,b)=>b.marketPrice-a.marketPrice);
    else boxes.sort((a,b)=>Date.parse(b.releaseDate||0)-Date.parse(a.releaseDate||0));
   }
+  if(Object.hasOwn(SPORTS,game)){
+   const makers=[...new Set(data.boxes.map(manufacturer))].sort();
+   const selected=makerFilter.value;
+   makerFilter.replaceChildren();
+   for(const maker of ["all",...makers]){const option=document.createElement("option");option.value=maker;option.textContent=maker==="all"?"All manufacturers":maker;makerFilter.appendChild(option);}
+   makerFilter.value=makers.includes(selected)?selected:"all";
+   const cap=sportsBudget.value==="all"?Infinity:Number(sportsBudget.value);
+   const filtered=boxes.filter(box=>(makerFilter.value==="all"||manufacturer(box)===makerFilter.value)&&Number.isFinite(box.marketPrice)&&box.marketPrice<=cap);
+   boxes.splice(0,boxes.length,...filtered);
+   if(sportsSort.value==="cheapest")boxes.sort((a,b)=>a.marketPrice-b.marketPrice);
+   else if(sportsSort.value==="chase")boxes.sort((a,b)=>(Math.max(0,...(b.chases||[]).map(c=>c.marketPrice||0))/(b.marketPrice||Infinity))-(Math.max(0,...(a.chases||[]).map(c=>c.marketPrice||0))/(a.marketPrice||Infinity)));
+  }
   resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+((Object.hasOwn(SPORTS,game)||Object.hasOwn(TOPPS,game))?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
   if(data.topps){statusEl.textContent=boxes.length?"Topps "+GAMES[game]+": product catalogue only; prices and chase cards pending a verified data source.":"Topps "+GAMES[game]+": product catalogue and pricing pending.";}
@@ -145,7 +169,7 @@ function renderGame(game,data){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    '<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(box.chases))+
+    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(box.chases))+
     '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
@@ -159,4 +183,4 @@ function renderGame(game,data){
 
 }
 loadBtn.addEventListener("click",()=>loadCompareBoxes(true));
-syncLimitedFilters();updateCount();loadCompareBoxes();
+syncLimitedFilters();syncSportsFilters();updateCount();loadCompareBoxes();
