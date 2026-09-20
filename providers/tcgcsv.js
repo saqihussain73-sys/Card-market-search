@@ -7,6 +7,8 @@
 
 const BASE = "https://tcgcsv.com/tcgplayer";
 const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super Fusion World",fleshandblood:"Flesh & Blood TCG",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse Evolve",yugioh:"YuGiOh"};
+const EXTRA_GAMES={pokemonjapan:"Pokemon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun Braverse TCG",palworld:"Palworld OFFICIAL CARD GAME",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super CCG"};
+Object.assign(GAME_NAMES,EXTRA_GAMES);
 const SPORTS={soccer:"Soccer",basketball:"Basketball",football:"Football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Hockey"};
 const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
