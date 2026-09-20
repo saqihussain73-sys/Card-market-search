@@ -190,9 +190,10 @@ function renderGame(game,data){
    if(sportsSort.value==="cheapest")boxes.sort((a,b)=>a.marketPrice-b.marketPrice);
    else if(sportsSort.value==="chase")boxes.sort((a,b)=>(Math.max(0,...(b.chases||[]).map(c=>c.marketPrice||0))/(b.marketPrice||Infinity))-(Math.max(0,...(a.chases||[]).map(c=>c.marketPrice||0))/(a.marketPrice||Infinity)));
   }
+  if(game!=="topps" && !data.refreshing && (!Array.isArray(data.boxes)||!data.boxes.some(box=>qualifyingChases(box).length))){const option=[...selector.options].find(o=>o.value===game);if(option)option.remove();statusEl.textContent=GAMES[game]+" hidden: no qualifying priced individual chase cards found in completed scan.";resultsEl.replaceChildren();return;}
   resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+((game==="topps")?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
-  if(data.topps){statusEl.textContent=data.status==="credentials_required"?"Topps listing search requires eBay API credentials in Railway.":boxes.length?boxes.length+" Topps UK active listings. Asking prices in GBP; numbered parallels and autographs are not yet verified per product.":"No qualifying Topps UK listings found for "+GAMES[game]+".";}
+  if(data.topps){statusEl.textContent=boxes.length?boxes.length+" officially documented Topps autograph-enabled hobby boxes. Purchase prices and individual autograph odds not yet verified.":"No officially verified autograph-enabled boxes currently listed for this collection.";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";card.dataset.productId=id;
