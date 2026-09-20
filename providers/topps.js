@@ -17,10 +17,11 @@ async function search(key){
  const response=await fetch(url,{headers:{Authorization:"Bearer "+bearer,"X-EBAY-C-MARKETPLACE-ID":"EBAY_GB"}});
  if(!response.ok)throw new Error("eBay search unavailable ("+response.status+")");
  const data=await response.json();
+ const hasWord=(value,words)=>words.some(word=>(" "+String(value).toLowerCase().replace(/[^a-z0-9]+/g," ")+" ").includes(" "+word+" "));
  const boxes=(data.itemSummaries||[]).filter(item=>{
   const name=item.title||"";
-  return /\\btopps\\b/i.test(name)&&/\\b(box|display|blaster|hobby|value|mega|pack)\\b/i.test(name)&&!/\\b(case|carton|empty|digital|break|replica|custom|single|loose cards|preorder)\\b/i.test(name)&&item.price?.currency==="GBP"&&Number(item.price.value)>0;
- }).map(item=>({set:key.replace(/^topps/,""),product:item.title,productId:item.itemId,type:/\\b(value|blaster|retail|mega)\\b/i.test(item.title)?"retail":/\\bpack\\b/i.test(item.title)&&!/\\bbox\\b/i.test(item.title)?"pack":"hobby",marketPrice:null,lowPrice:null,listingPriceGBP:Number(item.price.value),listingUrl:item.itemWebUrl,chases:[],releaseDate:null}));
+  return hasWord(name,["topps"])&&hasWord(name,["box","display","blaster","hobby","value","mega","pack"])&&!hasWord(name,["case","carton","empty","digital","break","replica","custom","single","preorder"])&&item.price?.currency==="GBP"&&Number(item.price.value)>0;
+ }).map(item=>({set:key.replace(/^topps/,""),product:item.title,productId:item.itemId,type:hasWord(item.title,["value","blaster","retail","mega"])?"retail":hasWord(item.title,["pack"])&&!hasWord(item.title,["box"])?"pack":"hobby",marketPrice:null,lowPrice:null,listingPriceGBP:Number(item.price.value),listingUrl:item.itemWebUrl,chases:[],releaseDate:null}));
  return {topps:true,status:"active_listings_only",boxes,source:"eBay UK active listings",fetchedAt:new Date().toISOString()};
 }
 module.exports={COLLECTIONS,search};
