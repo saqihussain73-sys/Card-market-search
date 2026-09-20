@@ -3,8 +3,8 @@ const resultsEl=document.getElementById("results");
 const loadBtn=document.getElementById("load-btn");
 const countEl=document.getElementById("collection-count");
 const STORAGE_KEY="card-market-search:riftbound:collected:v1";
-const GAMES={riftbound:"Riftbound",pokemon:"Pokémon",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super: Fusion World",fleshandblood:"Flesh and Blood",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse: Evolve",yugioh:"Yu-Gi-Oh!"};
-const LIMITED_GAMES=new Set(["pokemon","yugioh"]);
+const GAMES={riftbound:"Riftbound",onepiece:"One Piece",magic:"Magic: The Gathering",lorcana:"Disney Lorcana",gundam:"Gundam",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super: Fusion World",fleshandblood:"Flesh and Blood",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse: Evolve"};
+const LIMITED_GAMES=new Set();
 const PRICE_FILTERS={250:"Up to $250",all:"All prices"};
 const SORT_FILTERS={cheapest:"Cheapest first",newest:"Newest sets first",expensive:"Most expensive first"};
 const filterBar=document.getElementById("limited-filters");
@@ -17,7 +17,7 @@ function syncLimitedFilters(){
 }
 priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
 sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
-Object.assign(GAMES,{pokemonjapan:"Pokémon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
+Object.assign(GAMES,{weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
 const TOPPS={toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",toppsdisney:"Disney",toppswwe:"WWE",toppsgpk:"Garbage Pail Kids",toppssoccer:"Football / Soccer",toppsbasketball:"Basketball",toppsamericanfootball:"American football / NFL",toppsbaseball:"Baseball / MLB",toppsf1:"Formula 1",toppsufc:"UFC",toppshockey:"Ice hockey",toppsboxing:"Boxing",toppstennis:"Tennis",toppsgolf:"Golf",toppscricket:"Cricket",toppsracing:"Other motorsport"};
 GAMES.topps="Topps";
 const toppsCollection=document.getElementById("topps-collection");
@@ -146,8 +146,27 @@ async function loadCompareBoxes(force=false){
   if(!data.topps)rememberGame(game,data);
   if(sequence!==loadSequence)return;
   renderGame(game,data);
+  if(game!=="topps")loadUKPrices(game,data,sequence);
  }catch(error){if(sequence!==loadSequence)return;resultsEl.replaceChildren();statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
  finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
+}
+async function loadUKPrices(game,data,sequence){
+ const boxes=(data.boxes||[]).filter(box=>box.type==="booster").slice(0,30);
+ const tasks=boxes.map(async box=>{
+  try{
+   const response=await fetch("/api/uk-prices?game="+encodeURIComponent(game)+"&product="+encodeURIComponent(box.product)+"&set="+encodeURIComponent(box.set),{cache:"no-store"});
+   if(!response.ok)return;
+   const price=await response.json();
+   if(sequence!==loadSequence||currentGame!==game)return;
+   const id=game+":"+String(box.productId);
+   const node=[...resultsEl.querySelectorAll(".box-card")].find(el=>el.dataset.productId===id);
+   if(!node)return;
+   const holder=node.querySelector(".uk-price");
+   if(!holder)return;
+   holder.textContent=price.status==="credentials_required"?"UK listing prices unavailable: eBay API credentials required.":price.matchCount?("UK asking prices (GBP) · "+price.matchCount+" matching listings · lowest "+(price.lowestTotalGBP===null?"delivery unverified":"£"+price.lowestTotalGBP.toFixed(2)+" incl. listed delivery")+" · typical "+(price.medianTotalGBP===null?"unavailable":"£"+price.medianTotalGBP.toFixed(2))+" · sold price unavailable"):"No verified exact-product UK listings found.";
+  }catch{}
+ });
+ await Promise.all(tasks);
 }
 function renderGame(game,data){
  if(game!==currentGame)return;
@@ -176,11 +195,12 @@ function renderGame(game,data){
   if(data.topps){statusEl.textContent=data.status==="credentials_required"?"Topps listing search requires eBay API credentials in Railway.":boxes.length?boxes.length+" Topps UK active listings. Asking prices in GBP; numbered parallels and autographs are not yet verified per product.":"No qualifying Topps UK listings found for "+GAMES[game]+".";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
-   const card=document.createElement("article");card.className="box-card";
+   const card=document.createElement("article");card.className="box-card";card.dataset.productId=id;
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
     (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+(data.topps&&box.listingUrl?'<p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(box.listingUrl)+'">View this eBay listing</a></p>':buyLinks(box,game))+(data.topps?'<div class="chase-note"><strong>Numbered parallels & autographs</strong><br>1/1 · /5 · /10 · /25 · /50 · /99 · autograph cards: availability and pull odds not verified for this product. Check its official checklist and odds before purchasing.</div>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
     (data.topps?'<div class="prices"><div><small>eBay UK asking price (GBP)</small><strong>'+(Number.isFinite(box.listingPriceGBP)?'£'+box.listingPriceGBP.toFixed(2):'Not available')+'</strong></div><div><small>Price type</small><strong>Active listing</strong></div></div>':'<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>')+
+    (!data.topps?'<p class="uk-price">UK asking prices: checking exact-product listings…</p>':'')+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
    card.querySelector("input").addEventListener("change",event=>{
     if(event.target.checked)collected.add(id);else collected.delete(id);
