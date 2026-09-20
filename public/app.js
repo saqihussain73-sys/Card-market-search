@@ -81,6 +81,10 @@ function gradedSection(card) {
  if(!entries.length)return "";
  return '<div class="chase-meta">'+entries.map(([label,v])=>escapeHtml(label)+': <strong>'+money(v.price)+'</strong> · '+escapeHtml(v.source)+' · '+escapeHtml(new Date(v.updatedAt).toLocaleDateString("en-GB"))).join('<br>')+'</div>';
 }
+function qualifyingChases(box){
+ const excluded=/(booster|display|box|case|carton|pack|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessor|storage|bulk|sealed|hobby|blaster|hanger|mega|etb)/i;
+ return (Array.isArray(box.chases)?box.chases:[]).filter(card=>card&&typeof card.name==="string"&&!excluded.test(card.name)&&Number.isFinite(card.marketPrice)&&card.marketPrice>0&&Number.isFinite(box.marketPrice)&&card.marketPrice>box.marketPrice);
+}
 function chaseSection(chases) {
  const excluded=/(booster|display|box|case|carton|pack|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessor|storage|bulk|sealed|hobby|blaster|hanger|mega|etb)/i;
  const rows=(Array.isArray(chases)?chases:[]).filter(card=>card&&typeof card.name==="string"&&!excluded.test(card.name)).slice(0,3);
@@ -93,6 +97,8 @@ function chaseSection(chases) {
  '<small>USD market prices from TCGplayer daily mirror. Variants may represent the same card.</small></details>';
 }
 function updateCount(){countEl.textContent=collected.size+" collected";}
+const chaseValueFilter=document.getElementById("chase-value-filter");
+chaseValueFilter.addEventListener("change",()=>loadCompareBoxes(false));
 const typeSelector=document.getElementById("type-select");
 const SPORTS_TYPES={hobby:"Hobby boxes",retail:"Retail boxes",pack:"Individual packs",all:"All sports products"};
 const TYPES={booster:"Booster boxes",etb:"Elite Trainer Boxes",tin:"Tins",bundle:"Bundles & collections",deck:"Starter decks",all:"All sealed products"};
@@ -144,7 +150,7 @@ function renderGame(game,data){
  if(game!==currentGame)return;
   updateTypes(data.boxes);
   const limited=LIMITED_GAMES.has(game);
-  const boxes=data.boxes.filter(box=>(typeSelector.value==="all" || (box.type||"booster")===typeSelector.value) && (!limited || priceFilter.value==="all" || (Number.isFinite(box.marketPrice)&&box.marketPrice<=250)));
+  const boxes=data.boxes.filter(box=>(typeSelector.value==="all" || (box.type||"booster")===typeSelector.value) && (!limited || priceFilter.value==="all" || (Number.isFinite(box.marketPrice)&&box.marketPrice<=250)) && (data.topps || chaseValueFilter.value==="all" || qualifyingChases(box).length>0));
   if(limited){
    if(sortFilter.value==="cheapest")boxes.sort((a,b)=>a.marketPrice-b.marketPrice);
    else if(sortFilter.value==="expensive")boxes.sort((a,b)=>b.marketPrice-a.marketPrice);
@@ -169,7 +175,7 @@ function renderGame(game,data){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(box.chases))+
+    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
     '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
     '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
