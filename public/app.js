@@ -99,6 +99,7 @@ selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
+ resultsEl.replaceChildren();
  loadBtn.disabled=true;statusEl.className="";
  statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
  try{
@@ -108,8 +109,8 @@ async function loadCompareBoxes(force=false){
   const incoming=await response.json();
   if(response.status===202){
    if(sequence!==loadSequence)return;
-   if(data)renderGame(game,data);
-   statusEl.textContent=GAMES[game]+" is scanning for the first time. "+(data?"Showing saved results. ":"")+"Checking again in 5 seconds…";
+   resultsEl.replaceChildren();
+   statusEl.textContent=GAMES[game]+" scan pending. Checking again in 5 seconds…";
    setTimeout(()=>{if(sequence===loadSequence)loadCompareBoxes(true);},5000);
    return;
   }
@@ -118,7 +119,7 @@ async function loadCompareBoxes(force=false){
   rememberGame(game,data);
   if(sequence!==loadSequence)return;
   renderGame(game,data);
- }catch(error){if(sequence!==loadSequence)return;statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
+ }catch(error){if(sequence!==loadSequence)return;resultsEl.replaceChildren();statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
  finally{if(sequence===loadSequence)loadBtn.disabled=false;updateCount();}
 }
 function renderGame(game,data){
