@@ -7,6 +7,7 @@
 
 const BASE = "https://tcgcsv.com/tcgplayer";
 const GAME_NAMES = {riftbound:"Riftbound",pokemon:"Pokemon",onepiece:"One Piece",magic:"Magic",lorcana:"Lorcana TCG",gundam:"Gundam Card Game",starwars:"Star Wars Unlimited",unionarena:"Union Arena",digimon:"Digimon Card Game",fusionworld:"Dragon Ball Super Fusion World",fleshandblood:"Flesh & Blood TCG",grandarchive:"Grand Archive",hololive:"hololive OFFICIAL CARD GAME",shadowverse:"Shadowverse Evolve",yugioh:"YuGiOh"};
+const SPORTS={soccer:"Soccer",basketball:"Basketball",football:"Football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Hockey"};
 const CACHE_MS=24*60*60*1000;
 const resultCache=new Map();
 let nextRequest=0;
@@ -117,7 +118,17 @@ function topChases(products) {
   candidates.sort((a,b)=>b.marketPrice-a.marketPrice);
   return candidates.slice(0,3);
 }
-function productType(name) {
+function productType(name, sports=false) {
+ if(sports){
+  const n=String(name||"");
+  if(/\b(?:case|carton|lot|single card|blaster pack)\b/i.test(n))return null;
+  if(/\b(?:hobby box|hobby jumbo|hobby display|hobby pack box)\b/i.test(n))return "hobby";
+  if(/\b(?:blaster box|retail box|mega box|hanger box|value box|retail display)\b/i.test(n))return "retail";
+  if(/\b(?:booster box|display box)\b/i.test(n))return "hobby";
+  if(/\b(?:pack|packet)\b/i.test(n)&&!/\b(?:box|case|carton|lot)\b/i.test(n))return "pack";
+  return null;
+ }
+
  const n=String(name||"");
  if(/\b(?:case|carton|sleeve|playmat|single pack|loose pack)\b/i.test(n))return null;
  if(/\b(?:elite trainer box|ETB)\b/i.test(n))return "etb";
@@ -133,7 +144,7 @@ function isSealed(name) { return productType(name)==="booster"; }
  * Walks every set in a category and returns individual booster boxes with mirrored
  * market prices, most expensive first. This is what powers "Compare Boxes".
  */
-async function compareBoxes(categoryNameFragment) {
+async function compareBoxes(categoryNameFragment, sports=false) {
   const category = await findCategoryByName(categoryNameFragment);
   const groups = await listGroups(category.categoryId);
   const selected=groups.filter(g=>g.groupId && g.publishedOn && !Number.isNaN(Date.parse(g.publishedOn)) && Date.parse(g.publishedOn)<=Date.now()).sort((a,b)=>Date.parse(b.publishedOn)-Date.parse(a.publishedOn));
@@ -150,9 +161,9 @@ async function compareBoxes(categoryNameFragment) {
       catch(err){console.warn("Skipping unavailable group",group.groupId,err.message);continue;}
     }
     const chases=topChases(products);
-    if(chases.length<1)continue;
+    if(chases.length<1 && !sports)continue;
     for (const p of products) {
-      const type=productType(p.name);
+      const type=productType(p.name,sports);
       if (!type || !Number.isFinite(p.price?.marketPrice) || p.price.marketPrice<=0 || !Number.isFinite(p.price?.lowPrice) || p.price.lowPrice<=0) continue;
       results.push({
         type,
@@ -181,12 +192,13 @@ module.exports = {
   getProductsWithPrices,
   compareBoxes,
   GAME_NAMES,
+  SPORTS,
   async getGameBoxes(key) {
-    if(!Object.hasOwn(GAME_NAMES,key))throw new Error("Unsupported game");
+    if(!Object.hasOwn(GAME_NAMES,key)&&!Object.hasOwn(SPORTS,key))throw new Error("Unsupported game");
     const cached=resultCache.get(key);
     if(cached && Date.now()-cached.at<CACHE_MS)return cached.value;
     if(pendingGames.has(key))return pendingGames.get(key);
-    const job=compareBoxes(GAME_NAMES[key]).then(value=>{resultCache.set(key,{at:Date.now(),value});return value;}).finally(()=>pendingGames.delete(key));
+    const job=compareBoxes(SPORTS[key]||GAME_NAMES[key],Object.hasOwn(SPORTS,key)).then(value=>{resultCache.set(key,{at:Date.now(),value});return value;}).finally(()=>pendingGames.delete(key));
     pendingGames.set(key,job);
     return job;
   },
