@@ -129,14 +129,14 @@ selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.
 async function loadCompareBoxes(force=false){
  const game=currentGame;
  const sequence=++loadSequence;
- if(Object.hasOwn(TOPPS,game)){resultsEl.replaceChildren();renderGame(game,toppsData(game));return;}
+
  resultsEl.replaceChildren();
  loadBtn.disabled=true;statusEl.className="";
  statusEl.textContent="Loading "+GAMES[game]+"… You can browse other games while this loads.";
  try{
-  let data=viewCache.get(game)||savedGame(game);
+  let data=Object.hasOwn(TOPPS,game)?null:(viewCache.get(game)||savedGame(game));
   if(data&&!force){renderGame(game,data);loadBtn.disabled=false;return;}
-  const response=await fetch("/api/game/"+encodeURIComponent(game),{cache:"no-store"});
+  const response=await fetch((Object.hasOwn(TOPPS,game)?"/api/topps/":"/api/game/")+encodeURIComponent(game),{cache:"no-store"});
   const incoming=await response.json();
   if(response.status===202){
    if(sequence!==loadSequence)return;
@@ -147,7 +147,7 @@ async function loadCompareBoxes(force=false){
   }
   if(!response.ok)throw new Error(incoming.error||"HTTP "+response.status);
   data=incoming;
-  rememberGame(game,data);
+  if(!data.topps)rememberGame(game,data);
   if(sequence!==loadSequence)return;
   renderGame(game,data);
  }catch(error){if(sequence!==loadSequence)return;resultsEl.replaceChildren();statusEl.className="error";statusEl.textContent="Could not load prices: "+error.message;}
@@ -177,14 +177,14 @@ function renderGame(game,data){
   }
   resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+((Object.hasOwn(SPORTS,game)||Object.hasOwn(TOPPS,game))?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
-  if(data.topps){statusEl.textContent=boxes.length?"Topps "+GAMES[game]+": product catalogue only; prices and chase cards pending a verified data source.":"Topps "+GAMES[game]+": product catalogue and pricing pending. No verified priced products available yet.";}
+  if(data.topps){statusEl.textContent=data.status==="credentials_required"?"Topps listing search requires eBay API credentials in Railway.":boxes.length?boxes.length+" Topps UK active listings. Asking prices in GBP; chase prices and expected returns unavailable.":"No qualifying Topps UK listings found for "+GAMES[game]+".";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
    card.innerHTML='<h2>'+escapeHtml(box.set)+'</h2><p class="product">'+escapeHtml(box.product)+'</p>'+
-    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+buyLinks(box,game)+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
-    '<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
-    '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>'+
+    (Object.hasOwn(SPORTS,game)?'<p class="release">Manufacturer: '+escapeHtml(manufacturer(box))+' · Chase-to-box ratio is not expected return.</p>':'')+'<p class="release">'+(Object.hasOwn(SPORTS,game)?'Set catalogued: ':'Release: ')+escapeHtml(game==='riftbound'?releaseDate(box.set):'Set catalogued '+(box.releaseDate?new Date(box.releaseDate).toLocaleDateString('en-GB'):'not verified'))+'</p>'+(data.topps&&box.listingUrl?'<p><a target="_blank" rel="noopener noreferrer" href="'+escapeHtml(box.listingUrl)+'">View this eBay listing</a></p>':buyLinks(box,game))+(data.topps?'<p class="chase-note">Chase data pending a verified Topps source.</p>':chaseSection(chaseValueFilter.value==="all"?box.chases:qualifyingChases(box)))+
+    (data.topps?'<div class="prices"><div><small>eBay UK asking price (GBP)</small><strong>'+(Number.isFinite(box.listingPriceGBP)?'£'+box.listingPriceGBP.toFixed(2):'Not available')+'</strong></div><div><small>Price type</small><strong>Active listing</strong></div></div>':'<div class="prices"><div><small>US market reference (USD)</small><strong>'+money(box.marketPrice)+'</strong></div>'+
+    '<div><small>Lowest listing (USD)</small><strong>'+money(box.lowPrice)+'</strong></div></div>')+
     '<label class="collect"><input type="checkbox" '+(collected.has(id)?"checked":"")+'> In my sealed collection</label>';
    card.querySelector("input").addEventListener("change",event=>{
     if(event.target.checked)collected.add(id);else collected.delete(id);
