@@ -17,6 +17,7 @@ function syncLimitedFilters(){
 }
 priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
 sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
+Object.assign(GAMES,{pokemonjapan:"Pokémon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
 const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
 Object.assign(GAMES,SPORTS);
 let currentGame="riftbound";
