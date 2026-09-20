@@ -18,23 +18,24 @@ function syncLimitedFilters(){
 priceFilter.addEventListener("change",()=>loadCompareBoxes(false));
 sortFilter.addEventListener("change",()=>loadCompareBoxes(false));
 Object.assign(GAMES,{pokemonjapan:"Pokémon Japan",weiss:"Weiss Schwarz",cardfight:"Cardfight!! Vanguard",finalfantasy:"Final Fantasy TCG",universus:"UniVersus",godzilla:"Godzilla Card Game",cookierun:"CookieRun: Braverse",palworld:"Palworld",cyberpunk:"Cyberpunk TCG",naruto:"Naruto Card Game",elestrals:"Elestrals",alphaclash:"Alpha Clash",sorcery:"Sorcery: Contested Realm",metazoo:"MetaZoo",dragonballmasters:"Dragon Ball Super: Masters"});
-const TOPPS={toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",toppsfootball:"Football",toppsbaseball:"Baseball",toppsf1:"Formula 1"};
-Object.assign(GAMES,TOPPS);
+const TOPPS={
+ toppsspongebob:"SpongeBob SquarePants",toppsstarwars:"Star Wars",toppsmarvel:"Marvel",
+ toppsdisney:"Disney",toppswwe:"WWE",toppsgpk:"Garbage Pail Kids",
+ toppssoccer:"Football / Soccer",toppsbasketball:"Basketball",toppsamericanfootball:"American football / NFL",
+ toppsbaseball:"Baseball / MLB",toppsf1:"Formula 1",toppsufc:"UFC",
+ toppshockey:"Ice hockey",toppsboxing:"Boxing",toppstennis:"Tennis",toppsgolf:"Golf",
+ toppscricket:"Cricket",toppsracing:"Other motorsport"
+};
 const TOPPS_PRODUCTS={toppsspongebob:["2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Hobby Box","2025 Topps Chrome SpongeBob SquarePants 25th Anniversary Value Box","2025 Topps Chrome SpongeBob SquarePants Sapphire Edition Box"]};
 function toppsData(game){return {topps:true,boxes:(TOPPS_PRODUCTS[game]||[]).map((product,i)=>({set:GAMES[game],product,productId:"topps-"+game+"-"+i,type:/value/i.test(product)?"retail":"hobby",marketPrice:null,lowPrice:null,chases:[],releaseDate:null}))};}
-const SPORTS={soccer:"Football / Soccer",basketball:"Basketball",football:"American football",baseball:"Baseball",f1:"Formula 1",ufc:"UFC",cricket:"Cricket",hockey:"Ice hockey"};
-Object.assign(GAMES,SPORTS);
+Object.assign(GAMES,TOPPS);
+const SPORTS={};
 const sportsFilters=document.getElementById("sports-filters");
 const makerFilter=document.getElementById("maker-filter");
 const sportsBudget=document.getElementById("sports-budget");
 const sportsSort=document.getElementById("sports-sort");
-const MAKERS=["Topps","Panini","Upper Deck","Leaf","Fanatics","Futera","Onyx","Wild Card"];
-function manufacturer(box){
- const label=(String(box.product||"")+" "+String(box.set||"")).toLowerCase();
- return MAKERS.find(m=>label.includes(m.toLowerCase()))||"Unverified";
-}
-function syncSportsFilters(){sportsFilters.hidden=!Object.hasOwn(SPORTS,currentGame);makerFilter.value="all";sportsBudget.value="all";sportsSort.value="cheapest";}
-for(const el of [makerFilter,sportsBudget,sportsSort])el.addEventListener("change",()=>loadCompareBoxes(false));
+function manufacturer(){return "Topps";}
+function syncSportsFilters(){sportsFilters.hidden=true;}
 let currentGame="riftbound";
 let loadSequence=0;
 const viewCache=new Map();
@@ -117,7 +118,13 @@ function updateTypes(boxes){
 }
 typeSelector.addEventListener("change",()=>loadCompareBoxes(false));
 const selector=document.getElementById("game-select");
-for(const [key,label] of Object.entries(GAMES)){const option=document.createElement("option");option.value=key;option.textContent=label;selector.appendChild(option);}
+for(const [key,label] of Object.entries(GAMES)){
+ const option=document.createElement("option");option.value=key;option.textContent=label;
+ const group=Object.hasOwn(TOPPS,key)?"Topps · Sports & entertainment":"Trading card games";
+ let optgroup=[...selector.children].find(el=>el.label===group);
+ if(!optgroup){optgroup=document.createElement("optgroup");optgroup.label=group;selector.appendChild(optgroup);}
+ optgroup.appendChild(option);
+}
 selector.addEventListener("change",()=>{currentGame=selector.value;typeSelector.value=(Object.hasOwn(SPORTS,currentGame)||Object.hasOwn(TOPPS,currentGame))?"hobby":"booster";syncLimitedFilters();syncSportsFilters();loadCompareBoxes(false);});
 async function loadCompareBoxes(force=false){
  const game=currentGame;
@@ -170,7 +177,7 @@ function renderGame(game,data){
   }
   resultsEl.replaceChildren();
   statusEl.textContent=boxes.length+" priced "+((Object.hasOwn(SPORTS,game)||Object.hasOwn(TOPPS,game))?SPORTS_TYPES:TYPES)[typeSelector.value].toLowerCase()+" for "+GAMES[game]+". Prices are from a daily mirror.";
-  if(data.topps){statusEl.textContent=boxes.length?"Topps "+GAMES[game]+": product catalogue only; prices and chase cards pending a verified data source.":"Topps "+GAMES[game]+": product catalogue and pricing pending.";}
+  if(data.topps){statusEl.textContent=boxes.length?"Topps "+GAMES[game]+": product catalogue only; prices and chase cards pending a verified data source.":"Topps "+GAMES[game]+": product catalogue and pricing pending. No verified priced products available yet.";}
   for(const box of boxes){
    const id=game+":"+String(box.productId);
    const card=document.createElement("article");card.className="box-card";
