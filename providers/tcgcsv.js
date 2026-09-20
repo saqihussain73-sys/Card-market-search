@@ -97,10 +97,14 @@ async function getProductsWithPrices(categoryId, groupId) {
   }));
 }
 
+// Chase candidates must be individual cards, never sealed products or accessories.
+const NON_CARD_PRODUCT=/\\b(?:booster|display|box|boxes|case|cases|carton|pack|packs|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessory|accessories|storage|lot|bulk|sealed|hobby|blaster|hanger|mega|etb)\\b/i;
 function isCard(product) {
-  const name=String(product.name||"");
-  return !isSealed(name) &&
-    !/\b(?:booster|display|box|case|bundle|starter|deck|pack|sleeve|playmat|promo pack|collection)\\b/i.test(name);
+ const name=String(product.name||"");
+ if(!name.trim()||NON_CARD_PRODUCT.test(name))return false;
+ const type=String(product.productType||product.type||"").toLowerCase();
+ if(type && /sealed|accessor|box|pack|case|suppl/.test(type))return false;
+ return true;
 }
 function topChases(products) {
   const candidates=[];
