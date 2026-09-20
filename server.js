@@ -33,7 +33,7 @@ async function scanGame(key){
 }
 app.get("/api/game/:key",async(req,res)=>{
  const key=req.params.key;
- if(!Object.hasOwn(tcgcsv.GAME_NAMES,key))return res.status(404).json({error:"Unsupported game"});
+ if(!(Object.hasOwn(tcgcsv.GAME_NAMES,key)||Object.hasOwn(tcgcsv.SPORTS,key)))return res.status(404).json({error:"Unsupported game"});
  const snapshot=readSnapshot(key);
  if(snapshot){
   if(Date.now()-Date.parse(snapshot.savedAt||0)>24*60*60*1000)scanGame(key).catch(err=>console.warn("Background refresh:",key,err.message));
