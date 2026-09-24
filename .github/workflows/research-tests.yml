@@ -1,0 +1,27 @@
+name: Historical research tests
+on:
+  push:
+    branches: [feature/tcg-historical-research]
+  pull_request:
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run synthetic self-test
+        run: python research/tcg_research.py selftest
+      - name: Check Python syntax
+        run: python -m py_compile research/tcg_research.py
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install --ignore-scripts
+      - run: node --check server.js
+      - run: node --check research/bridge.js
