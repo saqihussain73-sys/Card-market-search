@@ -47,5 +47,6 @@ app.get("/api/game/:key",async(req,res)=>{
  return res.status(202).json({status:"scanning",game:key,message:"First scan in progress. Try again shortly."});
 });
 
+require("./research/bridge").register(app);
 app.get("/health", (req,res) => res.json({ok:true}));
 app.listen(PORT, () => console.log(`Card Market Search listening on ${PORT}`));
