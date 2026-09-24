@@ -48,5 +48,30 @@ app.get("/api/game/:key",async(req,res)=>{
 });
 
 require("./research/bridge").register(app);
+app.get("/api/cards/sets/:game", async(req,res)=>{
+ try {
+  const game=req.params.game;
+  if(!Object.hasOwn(tcgcsv.GAME_NAMES,game))return res.status(404).json({error:"Unsupported game"});
+  const category=await tcgcsv.findCategoryByName(tcgcsv.GAME_NAMES[game]);
+  const groups=await tcgcsv.listGroups(category.categoryId);
+  res.json({game,sets:groups.filter(g=>g.groupId).map(g=>({id:g.groupId,name:g.name})).sort((a,b)=>a.name.localeCompare(b.name))});
+ }catch(err){console.error(err);res.status(502).json({error:"Card sets unavailable"});}
+});
+app.get("/api/cards/:game/:groupId",async(req,res)=>{
+ try{
+  const game=req.params.game;
+  if(!Object.hasOwn(tcgcsv.GAME_NAMES,game))return res.status(404).json({error:"Unsupported game"});
+  const groupId=Number(req.params.groupId);
+  if(!Number.isSafeInteger(groupId)||groupId<=0)return res.status(400).json({error:"Invalid set"});
+  const category=await tcgcsv.findCategoryByName(tcgcsv.GAME_NAMES[game]);
+  const groups=await tcgcsv.listGroups(category.categoryId);
+  const group=groups.find(g=>g.groupId===groupId);
+  if(!group)return res.status(404).json({error:"Set not found"});
+  const products=await tcgcsv.getProductsWithPrices(category.categoryId,groupId);
+  const excluded=/\\b(?:booster|display|box|case|carton|pack|bundle|collection|starter|deck|tin|sleeve|playmat|binder|accessor|storage|bulk|sealed|hobby|blaster|hanger|mega|etb)\\b/i;
+  const cards=products.filter(p=>!excluded.test(p.name||"")&&!/sealed|accessor|box|pack|case|suppl/i.test(String(p.productType||p.type||""))).flatMap(p=>(p.prices||[]).filter(v=>Number.isFinite(v.marketPrice)&&v.marketPrice>0).map(v=>({productId:p.productId,name:p.name,variant:v.subTypeName||"Standard",marketPrice:v.marketPrice,lowPrice:Number.isFinite(v.lowPrice)?v.lowPrice:null}))).sort((a,b)=>b.marketPrice-a.marketPrice);
+  res.json({game,set:group.name,currency:"USD",source:"TCGCSV daily mirror",cards});
+ }catch(err){console.error(err);res.status(502).json({error:"Card prices unavailable"});}
+});
 app.get("/health", (req,res) => res.json({ok:true}));
 app.listen(PORT, () => console.log(`Card Market Search listening on ${PORT}`));
