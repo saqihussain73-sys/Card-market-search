@@ -80,6 +80,15 @@ async function listGroups(categoryId) {
   return data.results;
 }
 
+async function listGroupsResilient(categoryId) {
+  try { return await listGroups(categoryId); }
+  catch (primaryError) {
+    const urls=[`${BASE}/${categoryId}/groups.json`,`https://tcgcsv.com/tcgplayer/${categoryId}/groups`];
+    for(const url of urls){try{const data=await getJson(url);if(Array.isArray(data?.results))return data.results;}catch{}}
+    throw primaryError;
+  }
+}
+
 async function getProductsWithPrices(categoryId, groupId) {
   const [productsRes, pricesRes] = await Promise.all([
     getJson(`${BASE}/${categoryId}/${groupId}/products`),
@@ -195,6 +204,7 @@ module.exports = {
   listCategories,
   findCategoryByName,
   listGroups,
+  listGroupsResilient,
   getProductsWithPrices,
   compareBoxes,
   GAME_NAMES,
