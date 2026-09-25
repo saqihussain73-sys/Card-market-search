@@ -53,7 +53,7 @@ app.get("/api/cards/sets/:game", async(req,res)=>{
   const game=req.params.game;
   if(!Object.hasOwn(tcgcsv.GAME_NAMES,game))return res.status(404).json({error:"Unsupported game"});
   const category=await tcgcsv.findCategoryByName(tcgcsv.GAME_NAMES[game]);
-  const groups=await tcgcsv.listGroups(category.categoryId);
+  const groups=await tcgcsv.listGroupsResilient(category.categoryId);
   res.json({game,sets:groups.filter(g=>g.groupId).map(g=>({id:g.groupId,name:g.name})).sort((a,b)=>a.name.localeCompare(b.name))});
  }catch(err){console.error(err);res.status(502).json({error:"Card sets unavailable"});}
 });
@@ -64,7 +64,7 @@ app.get("/api/cards/:game/:groupId",async(req,res)=>{
   const groupId=Number(req.params.groupId);
   if(!Number.isSafeInteger(groupId)||groupId<=0)return res.status(400).json({error:"Invalid set"});
   const category=await tcgcsv.findCategoryByName(tcgcsv.GAME_NAMES[game]);
-  const groups=await tcgcsv.listGroups(category.categoryId);
+  const groups=await tcgcsv.listGroupsResilient(category.categoryId);
   const group=groups.find(g=>g.groupId===groupId);
   if(!group)return res.status(404).json({error:"Set not found"});
   const products=await tcgcsv.getProductsWithPrices(category.categoryId,groupId);
